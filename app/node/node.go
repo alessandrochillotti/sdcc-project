@@ -93,7 +93,4 @@ func get_nodes_in_group() {
 func main() {
 	// For first thing, the node communicates with the register node to register his info
 	register_node()
-
-	// Retrieve the ip address and port number for each node in group of multicast
-	get_nodes_in_group()
 }

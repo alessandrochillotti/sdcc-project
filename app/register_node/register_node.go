@@ -17,7 +17,10 @@ import (
 
 type Register int
 
-var f *os.File
+var f *os.FileMode
+var registered_nodes = 0
+
+const NUMBER_NODES = 3
 
 func check_error(e error, res *lib.Outcome) {
 	if e != nil {
@@ -27,13 +30,6 @@ func check_error(e error, res *lib.Outcome) {
 }
 
 func (reg *Register) Register_node(arg *lib.Whoami, res *lib.Outcome) error {
-
-	// d1 := []byte(arg.Ip_address + "\t" + arg.Port + "\n")
-
-	// err := os.WriteFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt", d1, 0644)
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	f, err := os.OpenFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -46,13 +42,19 @@ func (reg *Register) Register_node(arg *lib.Whoami, res *lib.Outcome) error {
 	}
 
 	*res = true
+	registered_nodes = registered_nodes + 1
 	fmt.Printf("The registration is for the ip address : %s\n", arg.Ip_address)
 
 	return nil
 }
 
+func send_list_registered_nodes() {
+	// TODO: server send list of registered nodes to each node
+}
+
 func (reg *Register) List_of_nodes(msg string, res *lib.Outcome) error {
-	fmt.Printf("Dummy list \n")
+
+	// TODO:
 
 	*res = true
 
@@ -67,7 +69,7 @@ func main() {
 	server := rpc.NewServer()
 	err := server.RegisterName("Register", reg)
 	if err != nil {
-		fmt.Printf("Format of service is not correct: ", err)
+		fmt.Println("Format of service is not correct: ", err)
 	}
 
 	// Create file to maintain ip address and number port of all registered nodes
@@ -75,14 +77,26 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	f.Close()
+	defer f.Close()
 
 	// Listen for incoming messages on port 4321
 	lis, err := net.Listen("tcp", ":4321")
 	if err != nil {
-		fmt.Printf("Listen error: ", err)
+		fmt.Println("Listen error: ", err)
 	}
-	fmt.Printf("RPC server on port %d\n", 4321)
 
-	server.Accept(lis)
+	fmt.Printf("The register node is up and running on port %d\n", 4321)
+
+	// Use goroutine to implement a lightweight thread to manage new connection
+	go server.Accept(lis)
+
+	for {
+		if registered_nodes == NUMBER_NODES {
+			send_list_registered_nodes()
+			lis.Close()
+			break
+		}
+	}
+
+	fmt.Println("The registration phase is completed")
 }
