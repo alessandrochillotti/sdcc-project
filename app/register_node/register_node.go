@@ -6,7 +6,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/rpc"
@@ -19,8 +21,6 @@ type Register int
 
 var f *os.FileMode
 var registered_nodes = 0
-
-const NUMBER_NODES = 3
 
 func check_error(e error, res *lib.Outcome) {
 	if e != nil {
@@ -49,16 +49,51 @@ func (reg *Register) Register_node(arg *lib.Whoami, res *lib.Outcome) error {
 }
 
 func send_list_registered_nodes() {
-	// TODO: server send list of registered nodes to each node
-}
+	var res lib.Outcome
 
-func (reg *Register) List_of_nodes(msg string, res *lib.Outcome) error {
+	// Read whole file
+	content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
+	if err != nil {
+		log.Fatalf("unable to read file: %v", err)
+	}
+	list := string(content)
 
-	// TODO:
+	// Open file
+	file, err := os.Open("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-	*res = true
+	// Read file line by line, so scan every ip address
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		// Prepare packet to send
+		pkt := lib.Packet{Source_address: "10.5.0.254", Message: list}
 
-	return nil
+		//Compute address destination
+		addr_node := scanner.Text() + ":4321"
+
+		fmt.Printf("Send list to %s\n", addr_node)
+
+		// Try to connect to addr_register_node
+		client, err := rpc.Dial("tcp", addr_node)
+		if err != nil {
+			log.Fatal("Error in dialing: ", err)
+		}
+		defer client.Close()
+
+		// Call remote procedure and reply will store the RPC result
+		err = client.Call("Node.Get_List_Nodes", &pkt, &res)
+		if err != nil {
+			log.Fatal("Error in Node.Get_List_Nodes: ", err)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 func main() {
@@ -85,18 +120,14 @@ func main() {
 		fmt.Println("Listen error: ", err)
 	}
 
-	fmt.Printf("The register node is up and running on port %d\n", 4321)
-
 	// Use goroutine to implement a lightweight thread to manage new connection
 	go server.Accept(lis)
 
 	for {
-		if registered_nodes == NUMBER_NODES {
+		if registered_nodes == lib.NUMBER_NODES {
 			send_list_registered_nodes()
 			lis.Close()
 			break
 		}
 	}
-
-	fmt.Println("The registration phase is completed")
 }

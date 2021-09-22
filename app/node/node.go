@@ -15,6 +15,10 @@ import (
 	"alessandro.it/app/lib"
 )
 
+type Node int
+
+var addresses [lib.NUMBER_NODES]string
+
 /* This function return the ip address of current node */
 func getIpAddress() string {
 	ip_address := "0.0.0.0"
@@ -54,7 +58,6 @@ func register_node() {
 	build_whoami_struct(&whoami_to_register)
 
 	// Call remote procedure and reply will store the RPC result
-	log.Printf("Synchronous call to RPC server")
 	err = client.Call("Register.Register_node", &whoami_to_register, &res)
 	if err != nil {
 		log.Fatal("Error in Register.Register_node: ", err)
@@ -83,14 +86,43 @@ func get_nodes_in_group() {
 	defer client.Close()
 
 	// Call remote procedure and reply will store the RPC result
-	log.Printf("Synchronous call to RPC server")
 	err = client.Call("Register.List_of_nodes", "foo", &res)
 	if err != nil {
 		log.Fatal("Error in Register.Register_node: ", err)
 	}
 }
 
+func (node *Node) Get_List_Nodes(arg *lib.Packet, res *lib.Outcome) error {
+
+	*res = true
+	fmt.Println(arg.Message)
+
+	return nil
+}
+
 func main() {
 	// For first thing, the node communicates with the register node to register his info
 	register_node()
+
+	node := new(Node)
+
+	receiver := rpc.NewServer()
+	err := receiver.RegisterName("Node", node)
+	if err != nil {
+		fmt.Println("Format of service is not correct: ", err)
+	}
+
+	// Listen for incoming messages on port 4321
+	lis, err := net.Listen("tcp", ":4321")
+	if err != nil {
+		fmt.Println("Listen error: ", err)
+	}
+
+	// Use goroutine to implement a lightweight thread to manage new connection
+	go receiver.Accept(lis)
+
+	for {
+		// Arrivo del pacchetto di lista di nodi
+
+	}
 }
