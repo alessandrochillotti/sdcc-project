@@ -19,8 +19,6 @@ services:
     volumes:
       # The following volume is mounted in /var/lib/docker/volumes/app_register_volume/_data directory
       - register_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
-    links:
-      - node
   node:
     build: 
       context: .
@@ -37,6 +35,8 @@ services:
                #  them to the port 8001 of my host and this is ok for the first
                #  container, but for the second (third and so on) the port 
                #  8001 is busy
+    links:
+      - register_node
 
 volumes:
   register_volume:
