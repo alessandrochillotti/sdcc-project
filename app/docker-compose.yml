@@ -18,7 +18,7 @@ services:
       - "8000:4321" # This maps port 8000 of my host to port 4321 of container
     volumes:
       # The following volume is mounted in /var/lib/docker/volumes/app_register_volume/_data directory
-      - register_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
+      - list_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
   node:
     build: 
       context: .
@@ -38,6 +38,18 @@ services:
                #  8001 is busy
     links:
       - register_node
+  sequencer_node:
+    build: 
+      context: .
+      dockerfile: sequencer/Dockerfile
+    networks:
+      my_net:
+        ipv4_address: 10.5.0.253
+    ports:
+      - "8001:4321" # This maps port 8000 of my host to port 4321 of container
+    volumes:
+      # The following volume is mounted in /var/lib/docker/volumes/app_register_volume/_data directory
+      - list_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
 
 volumes:
-  register_volume:
+  list_volume:
