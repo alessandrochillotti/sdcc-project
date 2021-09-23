@@ -23,6 +23,7 @@ services:
     build: 
       context: .
       dockerfile: node/Dockerfile
+    stdin_open: true 
     networks:
       - my_net
     ports:
