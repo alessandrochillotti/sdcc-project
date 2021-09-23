@@ -73,8 +73,6 @@ func send_list_registered_nodes() {
 		//Compute address destination
 		addr_node := scanner.Text() + ":4321"
 
-		fmt.Printf("Send list to %s\n", addr_node)
-
 		// Try to connect to addr_register_node
 		client, err := rpc.Dial("tcp", addr_node)
 		if err != nil {

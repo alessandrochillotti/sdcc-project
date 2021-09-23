@@ -129,8 +129,24 @@ func main() {
 	// Use goroutine to implement a lightweight thread to manage new connection
 	go receiver.Accept(lis)
 
+	var cmd int
 	for {
-		// Arrivo del pacchetto di lista di nodi
+		fmt.Printf("Insert the number associated to one of the following command:\n")
+		fmt.Printf("1. Send message\n")
+		fmt.Printf("2. Exit:\n")
+
+		fmt.Scanf("%d", &cmd)
+
+		fmt.Print("\033[H\033[2J")
+
+		if cmd == 1 {
+			// TODO: implement sending of message
+			fmt.Println("In progress..\n")
+		} else if cmd == 2 {
+			os.Exit(0)
+		} else {
+			fmt.Println("The number inserted is uncorrect\n")
+		}
 
 	}
 }
