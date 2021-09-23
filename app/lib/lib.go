@@ -13,5 +13,11 @@ type Whoami struct {
 
 type Packet struct {
 	Source_address string
+	Source_pid     int
 	Message        string
+}
+
+type Packet_sequencer struct {
+	Id  int
+	Pkt Packet
 }

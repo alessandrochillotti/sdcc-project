@@ -68,7 +68,7 @@ func send_list_registered_nodes() {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		// Prepare packet to send
-		pkt := lib.Packet{Source_address: "10.5.0.254", Message: list}
+		pkt := lib.Packet{Source_address: "10.5.0.254", Source_pid: os.Getpid(), Message: list}
 
 		//Compute address destination
 		addr_node := scanner.Text() + ":4321"

@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -133,15 +134,42 @@ func main() {
 	for {
 		fmt.Printf("Insert the number associated to one of the following command:\n")
 		fmt.Printf("1. Send message\n")
-		fmt.Printf("2. Exit:\n")
+		fmt.Printf("2. Exit\n")
 
 		fmt.Scanf("%d", &cmd)
 
 		fmt.Print("\033[H\033[2J")
 
 		if cmd == 1 {
-			// TODO: implement sending of message
-			fmt.Println("In progress..\n")
+			var text string
+			var res lib.Outcome
+
+			// Take in input the content of message to send
+			fmt.Println("Insert a text to send to each node of group multicast.")
+
+			in := bufio.NewReader(os.Stdin)
+			text, err := in.ReadString('\n')
+			text = strings.TrimSpace(text)
+
+			// Build packet to send
+			pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
+
+			// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 4321
+			addr_sequencer_node := "10.5.0.253:4321"
+
+			// Try to connect to addr_register_node
+			client, err := rpc.Dial("tcp", addr_sequencer_node)
+			if err != nil {
+				log.Fatal("Error in dialing: ", err)
+			}
+			defer client.Close()
+
+			// Call remote procedure and reply will store the RPC result
+			err = client.Call("Sequencer.Send_packet", &pkt, &res)
+			if err != nil {
+				log.Fatal("Error in Register.Register_node: ", err)
+			}
+
 		} else if cmd == 2 {
 			os.Exit(0)
 		} else {

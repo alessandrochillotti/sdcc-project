@@ -23,8 +23,6 @@ var registered_nodes = 0
 
 /* This function is called by each generic node to send packet to each node of group multicast */
 func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
-	// TODO: sequencer node assign id a received packet and trasmit it to each node of gropu multicast
-
 	// Open file
 	file, err := os.Open("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
 	if err != nil {
@@ -41,6 +39,8 @@ func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("Ricevuto %s da %s\n", arg.Message, arg.Source_address)
 
 	return nil
 }
@@ -64,8 +64,6 @@ func main() {
 
 	// Use goroutine to implement a lightweight thread to manage new connection
 	go sequencer.Accept(lis)
-
-	fmt.Println("Hi!")
 
 	for {
 		// TODO: implement a control that if nobody is up, then sequencer exit
