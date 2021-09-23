@@ -18,7 +18,8 @@ import (
 
 type Node int
 
-var addresses [lib.NUMBER_NODES]string
+// Global variables
+var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
 
 /* This function return the ip address of current node */
 func getIpAddress() string {
@@ -93,6 +94,7 @@ func get_nodes_in_group() {
 	}
 }
 
+/* This function is called by register node for sending list of ip addresses and it load list into array */
 func (node *Node) Get_List_Nodes(pkt *lib.Packet, res *lib.Outcome) error {
 
 	// Parse the list and load it into array of ip

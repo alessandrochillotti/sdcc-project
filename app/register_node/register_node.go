@@ -22,13 +22,7 @@ type Register int
 var f *os.FileMode
 var registered_nodes = 0
 
-func check_error(e error, res *lib.Outcome) {
-	if e != nil {
-		*res = false
-		os.Exit(1)
-	}
-}
-
+/* This function is called by each generic node to register its ip address into group multicast */
 func (reg *Register) Register_node(arg *lib.Whoami, res *lib.Outcome) error {
 
 	// Open file into volume docker
@@ -52,6 +46,7 @@ func (reg *Register) Register_node(arg *lib.Whoami, res *lib.Outcome) error {
 	return nil
 }
 
+/* This function send the list of ip addresses to each node in group multicast */
 func send_list_registered_nodes() {
 	var res lib.Outcome
 
