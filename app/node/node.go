@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strings"
 
 	"alessandro.it/app/lib"
 )
@@ -92,10 +93,15 @@ func get_nodes_in_group() {
 	}
 }
 
-func (node *Node) Get_List_Nodes(arg *lib.Packet, res *lib.Outcome) error {
+func (node *Node) Get_List_Nodes(pkt *lib.Packet, res *lib.Outcome) error {
+
+	// Parse the list and load it into array of ip
+	addr_tmp := strings.Split(pkt.Message, "\n")
+	for i := 0; i < lib.NUMBER_NODES; i++ {
+		addresses[i] = addr_tmp[i]
+	}
 
 	*res = true
-	fmt.Println(arg.Message)
 
 	return nil
 }

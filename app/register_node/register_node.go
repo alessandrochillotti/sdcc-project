@@ -31,18 +31,22 @@ func check_error(e error, res *lib.Outcome) {
 
 func (reg *Register) Register_node(arg *lib.Whoami, res *lib.Outcome) error {
 
+	// Open file into volume docker
 	f, err := os.OpenFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println(err)
 	}
 	defer f.Close()
+
+	// Write into file the ip address of registered node
 	if _, err := f.WriteString(arg.Ip_address + "\n"); err != nil {
 		log.Println(err)
 	}
 
 	*res = true
 	registered_nodes = registered_nodes + 1
+
 	fmt.Printf("The registration is for the ip address : %s\n", arg.Ip_address)
 
 	return nil
@@ -124,6 +128,7 @@ func main() {
 	go server.Accept(lis)
 
 	for {
+		// If all nodes are registered, then the register node send list of nodes to each of team
 		if registered_nodes == lib.NUMBER_NODES {
 			send_list_registered_nodes()
 			lis.Close()
