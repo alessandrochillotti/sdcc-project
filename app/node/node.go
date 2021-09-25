@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/rpc"
 	"os"
-	"strconv"
 	"strings"
 
 	"alessandro.it/app/lib"
@@ -114,13 +113,6 @@ func (node *Node) Get_List_Nodes(pkt *lib.Packet, res *lib.Outcome) error {
 	*res = true
 
 	return nil
-}
-
-func print_msg(pkt *lib.Packet) {
-	ip_splitted := strings.Split(pkt.Source_address, ".")
-	index, _ := strconv.Atoi(ip_splitted[3])
-
-	fmt.Printf("%s%s%s -> %s\n", lib.Colors[index-1], pkt.Source_address, lib.Colors[0], pkt.Message)
 }
 
 func log_message(pkt *lib.Packet) {
