@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"os/exec"
 	"strings"
 
 	"alessandro.it/app/lib"
@@ -136,7 +137,11 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error
 	if current_id+1 == pkt.Id {
 		current_id = current_id + 1
 		log_message(&pkt.Pkt)
-		fmt.Print("\033[H\033[2J")
+
+		// Clear shell
+		cmd := exec.Command("clear") //Linux example, its tested
+		cmd.Stdout = os.Stdout
+		cmd.Run()
 
 		// Print chat
 		content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -246,8 +251,15 @@ func main() {
 
 	node := new(Node)
 
+	// Create file for log of messages
+	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
 	receiver := rpc.NewServer()
-	err := receiver.RegisterName("Node", node)
+	err = receiver.RegisterName("Node", node)
 	if err != nil {
 		fmt.Println("Format of service is not correct: ", err)
 	}
