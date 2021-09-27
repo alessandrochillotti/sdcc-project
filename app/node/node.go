@@ -133,8 +133,6 @@ func log_message(pkt *lib.Packet) {
 /* This function is called by sequencer node for sending message */
 func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error {
 
-	// TODO: send stuff to frontend
-
 	if current_id+1 == pkt.Id {
 		current_id = current_id + 1
 		log_message(&pkt.Pkt)
@@ -149,6 +147,7 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error
 
 		print(list)
 
+		// print_msg(&pkt.Pkt)
 	} else {
 		// TODO: buffer packet
 		buffer <- *pkt
@@ -160,8 +159,16 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error
 	return nil
 }
 
-func send_packet(text string) {
+func send_packet() {
+	var text string
 	var res lib.Outcome
+
+	// Take in input the content of message to send
+	fmt.Println("Insert a text to send to each node of group multicast.")
+
+	in := bufio.NewReader(os.Stdin)
+	text, err := in.ReadString('\n')
+	text = strings.TrimSpace(text)
 
 	// Build packet to send
 	pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
@@ -202,73 +209,84 @@ func receive_message() {
 	go receiver.Accept(lis)
 
 	for {
+		var text string
+		var res lib.Outcome
+
 		// Take in input the content of message to send
+		// fmt.Println("Insert a text to send to each node of group multicast.")
+
 		in := bufio.NewReader(os.Stdin)
 		text, err := in.ReadString('\n')
-		if err != nil {
-			log.Fatal("Error in ReadString: ", err)
-		}
 		text = strings.TrimSpace(text)
 
-		send_packet(text)
-	}
-}
+		// Build packet to send
+		pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
 
-func frontend_interrupt() {
-	service := ":4321"
-	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		os.Exit(1)
-	}
+		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 4321
+		addr_sequencer_node := "10.5.0.253:4321"
 
-	listener, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		os.Exit(1)
-	}
-
-	for {
-		conn, err := listener.Accept()
+		// Try to connect to addr_register_node
+		client, err := rpc.Dial("tcp", addr_sequencer_node)
 		if err != nil {
-			continue
+			log.Fatal("Error in dialing: ", err)
 		}
-		defer conn.Close()
-		request := make([]byte, 128) // set maximum request length to 128B to prevent flood based attacks
-		defer conn.Close()           // close connection before exit
-		for {
-			read_len, err := conn.Read(request)
+		defer client.Close()
 
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
-
-			if read_len == 0 {
-				break
-			} else {
-				send_packet(string(request[:read_len]))
-			}
+		// Call remote procedure and reply will store the RPC result
+		err = client.Call("Sequencer.Send_packet", &pkt, &res)
+		if err != nil {
+			log.Fatal("Error in Register.Register_node: ", err)
 		}
-
 	}
-
 }
 
 func main() {
-
-	frontend_interrupt()
 	// For first thing, the node communicates with the register node to register his info
 	register_node()
 
-	// Create file for log of messages
-	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+	node := new(Node)
+
+	receiver := rpc.NewServer()
+	err := receiver.RegisterName("Node", node)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Format of service is not correct: ", err)
 	}
-	defer f.Close()
 
-	// After registration, the node is ready to communicate into multicast group
-	receive_message()
+	// Listen for incoming messages on port 4321
+	lis, err := net.Listen("tcp", ":4321")
+	if err != nil {
+		fmt.Println("Listen error: ", err)
+	}
 
+	// Use goroutine to implement a lightweight thread to manage new connection
+	go receiver.Accept(lis)
+
+	for {
+		var text string
+		var res lib.Outcome
+
+		in := bufio.NewReader(os.Stdin)
+		text, err := in.ReadString('\n')
+		text = strings.TrimSpace(text)
+
+		// Build packet to send
+		pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
+
+		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 4321
+		addr_sequencer_node := "10.5.0.253:4321"
+
+		// Try to connect to addr_register_node
+		client, err := rpc.Dial("tcp", addr_sequencer_node)
+		if err != nil {
+			log.Fatal("Error in dialing: ", err)
+		}
+		defer client.Close()
+
+		// Call remote procedure and reply will store the RPC result
+		err = client.Call("Sequencer.Send_packet", &pkt, &res)
+		if err != nil {
+			log.Fatal("Error in Register.Register_node: ", err)
+		}
+
+	}
 }
