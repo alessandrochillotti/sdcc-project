@@ -1,2 +1,0 @@
-1. Listare i container disponibili con il loro nome e farne selezionare uno di essi
-2. All'inserimento usare le api docker per fare l'attach su uno di essi

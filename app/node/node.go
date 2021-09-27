@@ -273,6 +273,8 @@ func main() {
 	// Use goroutine to implement a lightweight thread to manage new connection
 	go receiver.Accept(lis)
 
+	fmt.Println("L'algoritmo selezione è", os.Args[1])
+
 	for {
 		var text string
 		var res lib.Outcome
