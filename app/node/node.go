@@ -80,10 +80,34 @@ func log_message(pkt *lib.Packet) {
 	lib.Check_error(err)
 }
 
+func check_buffered_packet() {
+	for {
+		current_packet := <-buffer
+		if current_id+1 == current_packet.Id { // If the packet is the expected packet
+			current_id = current_id + 1
+			log_message(&current_packet.Pkt)
+
+			// Clear shell
+			cmd := exec.Command("clear")
+			cmd.Stdout = os.Stdout
+			cmd.Run()
+
+			// Print chat
+			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+			lib.Check_error(err)
+
+			list := string(content)
+
+			print(list)
+		} else {
+			buffer <- current_packet
+		}
+	}
+}
+
 /* This function is called by sequencer node for sending message */
 func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error {
-
-	if current_id+1 == pkt.Id {
+	if current_id+1 == pkt.Id { // If the packet is the expected packet
 		current_id = current_id + 1
 		log_message(&pkt.Pkt)
 
@@ -100,9 +124,8 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error
 
 		print(list)
 	} else {
-		// TODO: buffer packet
+		// Buffered packet
 		buffer <- *pkt
-		// TODO: implement a goroutine that check if there are packet buffered that contains next id
 	}
 
 	*res = true
@@ -143,6 +166,7 @@ func main() {
 	register_into_group()
 
 	node := new(Node)
+	buffer = make(chan lib.Packet_sequencer)
 
 	// Create file for log of messages
 	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -161,6 +185,8 @@ func main() {
 
 	// Use goroutine to implement a lightweight thread to manage the coming of new messages
 	go receiver.Accept(lis)
+
+	// go check_buffered_packet()
 
 	open_standard_input()
 }
