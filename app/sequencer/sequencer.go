@@ -47,7 +47,8 @@ func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
 		// Try to connect to addr_register_node
 		client, err := rpc.Dial("tcp", addr_node)
 		if err != nil {
-			log.Fatal("Error in dialing: ", err)
+			log.Println("Error in dialing: ", err)
+			return err
 		}
 		defer client.Close()
 
@@ -55,15 +56,15 @@ func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
 		err = client.Call("Node.Get_Message", &pkt_seq, &res)
 		if err != nil {
 			log.Fatal("Error in Node.Get_Message: ", err)
+			return err
 		}
 
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return err
 	}
-
-	fmt.Printf("Ricevuto %s da %s\n", arg.Message, arg.Source_address)
 
 	return nil
 }

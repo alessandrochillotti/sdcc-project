@@ -6,7 +6,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -78,22 +77,17 @@ func main() {
 	// Register a new RPC server and the struct we created above
 	server := rpc.NewServer()
 	err := server.RegisterName("Register", reg)
-	if err != nil {
-		fmt.Println("Format of service is not correct: ", err)
-	}
+	lib.Check_error(err)
 
 	// Create file to maintain ip address and number port of all registered nodes
 	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
-	if err != nil {
-		log.Fatal(err)
-	}
+	lib.Check_error(err)
 	f.Close()
 
 	// Listen for incoming messages on port 4321
 	lis, err := net.Listen("tcp", ":4321")
-	if err != nil {
-		fmt.Println("Listen error: ", err)
-	}
+	lib.Check_error(err)
+
 	defer lis.Close()
 
 	// Those channels allow the syncronization between the goroutines
