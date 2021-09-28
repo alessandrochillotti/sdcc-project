@@ -9,9 +9,11 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/rpc"
 	"os"
+	"time"
 
 	"alessandro.it/app/lib"
 )
@@ -23,6 +25,37 @@ var f *os.FileMode
 // Global variables
 var registered_nodes = 0
 var current_id = 0
+
+func send_multicast_message(ip_address string, arg *lib.Packet, res *lib.Outcome) error {
+	// Prepare packet to send
+	pkt_seq := lib.Packet_sequencer{Id: current_id, Pkt: *arg}
+
+	//Compute address destination
+	addr_node := ip_address + ":4321"
+
+	// Try to connect to addr_register_node
+	client, err := rpc.Dial("tcp", addr_node)
+	if err != nil {
+		log.Println("Error in dialing: ", err)
+		return err
+	}
+	defer client.Close()
+
+	// Delay
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	fmt.Println("Delay = ", r1)
+	time.Sleep((10 * 10 * 10 * 10 * 10 * 10 * 10 * 10 * 10 * 10) * time.Duration(r1.ExpFloat64()))
+
+	// Call remote procedure and reply will store the RPC result
+	err = client.Call("Node.Get_Message", &pkt_seq, &res)
+	if err != nil {
+		log.Fatal("Error in Node.Get_Message: ", err)
+		return err
+	}
+
+	return nil
+}
 
 /* This function is called by each generic node to send packet to each node of group multicast */
 func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
@@ -38,27 +71,7 @@ func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
 	current_id = current_id + 1
 
 	for scanner.Scan() {
-		// Prepare packet to send
-		pkt_seq := lib.Packet_sequencer{Id: current_id, Pkt: *arg}
-
-		//Compute address destination
-		addr_node := scanner.Text() + ":4321"
-
-		// Try to connect to addr_register_node
-		client, err := rpc.Dial("tcp", addr_node)
-		if err != nil {
-			log.Println("Error in dialing: ", err)
-			return err
-		}
-		defer client.Close()
-
-		// Call remote procedure and reply will store the RPC result
-		err = client.Call("Node.Get_Message", &pkt_seq, &res)
-		if err != nil {
-			log.Fatal("Error in Node.Get_Message: ", err)
-			return err
-		}
-
+		go send_multicast_message(scanner.Text(), arg, res)
 	}
 
 	if err := scanner.Err(); err != nil {
