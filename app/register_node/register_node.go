@@ -71,7 +71,6 @@ func (reg *Register) Register_node(arg *lib.Whoami, addresses *[lib.NUMBER_NODES
 }
 
 func main() {
-
 	reg := new(Register)
 
 	// Register a new RPC server and the struct we created above

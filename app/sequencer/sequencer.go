@@ -20,12 +20,14 @@ import (
 
 type Sequencer int
 
-var f *os.FileMode
-
 // Global variables
+var f *os.FileMode
 var registered_nodes = 0
 var current_id = 0
 
+/*
+	This function send a specific message to each node of group multicast.
+*/
 func send_multicast_message(ip_address string, arg *lib.Packet, res *lib.Outcome) error {
 	// Prepare packet to send
 	pkt_seq := lib.Packet_sequencer{Id: current_id, Pkt: *arg}
@@ -41,11 +43,12 @@ func send_multicast_message(ip_address string, arg *lib.Packet, res *lib.Outcome
 	}
 	defer client.Close()
 
-	// Delay
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	fmt.Println("Delay = ", r1)
-	time.Sleep((10 * 10 * 10 * 10 * 10 * 10 * 10 * 10 * 10 * 10) * time.Duration(r1.ExpFloat64()))
+	// Set the initial seed of PRNG
+	rand.Seed(time.Now().UnixNano())
+	// Extract a number that is between 0 and 2
+	n := rand.Intn(3)
+	// Simule the delay computed above
+	time.Sleep(time.Duration(n) * time.Second)
 
 	// Call remote procedure and reply will store the RPC result
 	err = client.Call("Node.Get_Message", &pkt_seq, &res)
@@ -70,6 +73,7 @@ func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
 	scanner := bufio.NewScanner(file)
 	current_id = current_id + 1
 
+	// Send to each node of group multicast the message
 	for scanner.Scan() {
 		go send_multicast_message(scanner.Text(), arg, res)
 	}
@@ -83,10 +87,9 @@ func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
 }
 
 func main() {
-
 	reg := new(Sequencer)
 
-	// Register a new RPC server and the struct we created above
+	// Register a sequencer methods
 	sequencer := rpc.NewServer()
 	err := sequencer.RegisterName("Sequencer", reg)
 	if err != nil {
