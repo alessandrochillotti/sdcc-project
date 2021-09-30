@@ -3,9 +3,9 @@
 ### Istanziazione dell'applicazione
 Per istanziare l'applicazione utilizzare il seguente comando:
 ```[bash]
-ALGO=X docker-compose up --scale node=N -d
+./start.sh ALGO
 ```
-dove N è il numero di partecipanti al gruppo di multicast e X assume i seguenti valori:
+dove ALGO assume i seguenti valori:
 - 1: multicast totalmente ordinato implementato in modo centralizzato tramite un sequencer
 - 2: multicast totalmente ordinato implementato in modo decentralizzato tramite l’uso di clock logici
 scalari
@@ -17,3 +17,9 @@ Per l'interazione con i container istanziati in precedenza utilizzare il seguent
 docker attach app_node_Y
 ```
 dove Y è il numero del nodo con cui si è interessati interagire. Ovviamente, Y è un numero che prende valori da 1 ad N.
+### Rimozione container
+Per rimuove i container creati dall'esecuzione dell'applicazione utilizzare il seguente comando:
+```[bash]
+./stop.sh ALGO
+```
+dove ALGO corrisponderà al valore inserito in precedenza per l'istanziazione dell'applicazione.

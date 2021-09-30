@@ -22,7 +22,7 @@ services:
   node:
     build: 
       context: .
-      dockerfile: node/Dockerfile
+      dockerfile: node-algorithm-2/Dockerfile
       args:
         ALGO: ${ALGO}
     stdin_open: true 
@@ -43,19 +43,6 @@ services:
       - log_node:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
     links:
       - register_node
-      - sequencer_node
-  sequencer_node:
-    build: 
-      context: .
-      dockerfile: sequencer/Dockerfile
-    networks:
-      my_net:
-        ipv4_address: 10.5.0.253
-    ports:
-      - "8001:4321" # This maps port 8000 of my host to port 4321 of container
-    volumes:
-      # The following volume is mounted in /var/lib/docker/volumes/app_log_volume/_data/nodes.txt
-      - list_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
       
 volumes:
   list_volume:

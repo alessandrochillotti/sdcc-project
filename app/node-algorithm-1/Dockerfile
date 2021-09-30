@@ -5,7 +5,7 @@ ENV ALGORITHM ${ALGO}
 
 WORKDIR /app
 
-COPY ./node/node.go ./node/
+COPY ./node-algorithm-1/node.go ./node/node.go
 COPY ./lib ./lib
 
 RUN go mod init alessandro.it/app \
