@@ -145,7 +145,7 @@ func open_standard_input() {
 		text = strings.TrimSpace(text)
 
 		// Build packet to send
-		pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
+		pkt := lib.Packet{Source_address: getIpAddress(), Message: text}
 
 		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 4321
 		addr_sequencer_node := "10.5.0.253:4321"
