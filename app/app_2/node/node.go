@@ -8,6 +8,8 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
+	"math"
 	"net"
 	"net/rpc"
 	"os"
@@ -24,8 +26,9 @@ type Node int
 const MAX_QUEUE = 100
 
 // Global variables
-var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
-var buffer chan (lib.Packet_sequencer)
+var scalar_clock int = 0
+var addresses *lib.Addresses /* Contains ip addresses of each node in multicast group */
+var queue *utils.Queue
 
 /*
 This function return the ip address of current node
@@ -98,40 +101,67 @@ func deliver_packet() {
 	// TODO: implemnt algorithm to deliver packet
 }
 
+func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) {
+	// Update my scalar clock
+	scalar_clock = int(math.Max(float64(scalar_clock), float64(update.Timestamp)))
+	scalar_clock = scalar_clock + 1
+
+	// Put update in queue
+	update_node := &utils.Node{Packet: *update}
+	queue.Update_into_queue(update_node)
+
+	// Send ack to sender of update message
+	*ack = true
+}
+
+func send_update(addr_node string, pkt lib.Packet) error {
+	// Try to connect to node
+	client, err := rpc.Dial("tcp", addr_node)
+	if err != nil {
+		log.Println("Error in dialing: ", err)
+		return err
+	}
+	defer client.Close()
+
+	// Build update to send
+	scalar_clock = scalar_clock + 1
+	update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
+	var ack utils.Ack = false
+
+	// Delay the send of update message
+	// lib.Delay()
+
+	divCall := client.Go("Node.Get_update", &update, &ack, nil)
+	divCall = <-divCall.Done
+	if divCall.Error != nil {
+		fmt.Println("Error in Node.Get_update: ", divCall.Error.Error())
+	}
+
+	return nil
+}
+
 /*
 This function allow to wait the input of user to send the message to each node of group multicast
 */
 func open_standard_input() {
-	var res lib.Outcome
-
 	for {
 		// Take in input the content of message to send
 		in := bufio.NewReader(os.Stdin)
-		text, err := in.ReadString('\n')
+		text, _ := in.ReadString('\n')
 		text = strings.TrimSpace(text)
 
-		// Build packet to send
+		// Build packet
 		pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
 
-		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 4321
-		addr_sequencer_node := "10.5.0.253:4321"
-
-		// Try to connect to addr_register_node
-		client, err := rpc.Dial("tcp", addr_sequencer_node)
-		lib.Check_error(err)
-
-		defer client.Close()
-
-		divCall := client.Go("Sequencer.Send_packet", &pkt, &res, nil)
-		divCall = <-divCall.Done
-		if divCall.Error != nil {
-			fmt.Println("Error in Sequencer.Send_packet: ", divCall.Error.Error())
+		// Send to each node of group multicast the message
+		for i := 0; i < lib.NUMBER_NODES; i++ {
+			addr_node := addresses.Addresses_array[i] + ":1234"
+			fmt.Println("Sto inviando a", addr_node)
+			go send_update(addr_node, pkt)
 		}
-	}
-}
 
-func (node *Node) Send_update(update *utils.Update, ack *utils.Ack) error {
-	return nil
+		// queue.Display()
+	}
 }
 
 func main() {
@@ -139,7 +169,6 @@ func main() {
 	register_into_group()
 
 	node := new(Node)
-	buffer = make(chan lib.Packet_sequencer, MAX_QUEUE)
 
 	// Create file for log of messages
 	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -152,7 +181,7 @@ func main() {
 	lib.Check_error(err)
 
 	// Listen for incoming messages on port 4321
-	lis, err := net.Listen("tcp", ":4321")
+	lis, err := net.Listen("tcp", ":1234")
 	lib.Check_error(err)
 
 	// Use goroutine to implement a lightweight thread to manage the coming of new messages

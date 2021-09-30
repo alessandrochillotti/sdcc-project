@@ -28,7 +28,7 @@ This function is called by each generic node to:
 	1. Register its ip address into group multicast
 	2. When the number of node is equal to NUMBER_NODES, the register_node send the list of nodes
 */
-func (reg *Register) Register_node(arg *lib.Whoami, addresses *[lib.NUMBER_NODES]string) error {
+func (reg *Register) Register_node(arg *lib.Whoami, addresses *lib.Addresses) error {
 
 	// Open file into volume docker
 	f, err := os.OpenFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt",
@@ -61,7 +61,7 @@ func (reg *Register) Register_node(arg *lib.Whoami, addresses *[lib.NUMBER_NODES
 	// Parse the list and put the addresses into destination array
 	addr_tmp := strings.Split(list_of_nodes, "\n")
 	for i := 0; i < lib.NUMBER_NODES; i++ {
-		addresses[i] = addr_tmp[i]
+		addresses.Addresses_array[i] = addr_tmp[i]
 	}
 
 	// Communicate to the main process that goroutine has terminated its job

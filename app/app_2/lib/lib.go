@@ -1,6 +1,10 @@
 package lib
 
-import "log"
+import (
+	"log"
+	"math/rand"
+	"time"
+)
 
 /* Constant values */
 const NUMBER_NODES = 3
@@ -16,20 +20,29 @@ type Whoami struct {
 	Port       string
 }
 
-// This struct is used to send 'first version' of packet to sequencer
+// This is a packet that contain the message to send to each node og group multicast
 type Packet struct {
 	Source_address string
 	Source_pid     int
 	Message        string
 }
 
-// This struct is used by sequencer to reply to each node of group multicast
-type Packet_sequencer struct {
-	Id  int
-	Pkt Packet
+// This struct is used for RPC methods when the reply is not important
+type Empty struct{}
+
+type Addresses struct {
+	Addresses_array [NUMBER_NODES]string
 }
 
 /* Utility */
+func Delay() {
+	// Set the initial seed of PRNG
+	rand.Seed(time.Now().UnixNano())
+	// Extract a number that is between 0 and 2
+	n := rand.Intn(3)
+	// Simule the delay computed above
+	time.Sleep(time.Duration(n) * time.Second)
+}
 
 // This function allow to verify if there is error and return it
 func Check_error(err error) error {
