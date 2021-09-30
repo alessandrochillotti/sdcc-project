@@ -19,7 +19,6 @@ type Whoami struct {
 // This struct is used to send 'first version' of packet to sequencer
 type Packet struct {
 	Source_address string
-	Source_pid     int
 	Message        string
 }
 
