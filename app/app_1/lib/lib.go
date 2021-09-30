@@ -28,6 +28,13 @@ type Packet_sequencer struct {
 	Pkt Packet
 }
 
+// This struct is use for RPC method when the reply is not important
+type Empty struct{}
+
+type Addresses struct {
+	Addresses [NUMBER_NODES]string
+}
+
 /* Utility */
 
 // This function allow to verify if there is error and return it

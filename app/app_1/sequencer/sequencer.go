@@ -28,7 +28,7 @@ var current_id = 0
 /*
 	This function send a specific message to each node of group multicast.
 */
-func send_multicast_message(ip_address string, arg *lib.Packet, res *lib.Outcome) error {
+func send_multicast_message(ip_address string, arg *lib.Packet, empty *lib.Empty) error {
 	// Prepare packet to send
 	pkt_seq := lib.Packet_sequencer{Id: current_id, Pkt: *arg}
 
@@ -51,7 +51,7 @@ func send_multicast_message(ip_address string, arg *lib.Packet, res *lib.Outcome
 	time.Sleep(time.Duration(n) * time.Second)
 
 	// Call remote procedure and reply will store the RPC result
-	err = client.Call("Node.Get_Message", &pkt_seq, &res)
+	err = client.Call("Node.Get_Message", &pkt_seq, &empty)
 	if err != nil {
 		log.Fatal("Error in Node.Get_Message: ", err)
 		return err
@@ -61,7 +61,7 @@ func send_multicast_message(ip_address string, arg *lib.Packet, res *lib.Outcome
 }
 
 /* This function is called by each generic node to send packet to each node of group multicast */
-func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
+func (reg *Sequencer) Send_packet(arg *lib.Packet, empty *lib.Empty) error {
 	// Open file
 	file, err := os.Open("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
 	if err != nil {
@@ -75,7 +75,7 @@ func (reg *Sequencer) Send_packet(arg *lib.Packet, res *lib.Outcome) error {
 
 	// Send to each node of group multicast the message
 	for scanner.Scan() {
-		go send_multicast_message(scanner.Text(), arg, res)
+		go send_multicast_message(scanner.Text(), arg, empty)
 	}
 
 	if err := scanner.Err(); err != nil {

@@ -25,7 +25,6 @@ type Node int
 const MAX_PACKET_BUFFERED = 100
 
 // Global variables
-var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
 var current_id = 0
 var buffer chan (lib.Packet_sequencer)
 
@@ -59,6 +58,7 @@ This function allows to register the node to communicate in multicast group
 */
 func register_into_group() {
 	var whoami_to_register lib.Whoami
+	var empty lib.Empty
 
 	// The RPC server has ip address set to 10.5.0.254 and it is listening in port 4321
 	addr_register_node := "10.5.0.254:4321"
@@ -71,7 +71,7 @@ func register_into_group() {
 	build_whoami_struct(&whoami_to_register)
 
 	// Call remote procedure and reply will store the RPC result
-	client.Call("Register.Register_node", &whoami_to_register, &addresses)
+	client.Call("Register.Register_node", &whoami_to_register, &empty)
 }
 
 /*
@@ -125,7 +125,7 @@ func deliver_packet() {
 /*
 This function is called by sequencer node for sending message: the message is received, not delivered.
 */
-func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error {
+func (node *Node) Get_Message(pkt *lib.Packet_sequencer, empty *lib.Empty) error {
 	// The packet is received, so it is buffered
 	buffer <- *pkt
 
@@ -136,8 +136,7 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, res *lib.Outcome) error
 This function allow to wait the input of user to send the message to each node of group multicast
 */
 func open_standard_input() {
-	var res lib.Outcome
-
+	var empty lib.Empty
 	for {
 		// Take in input the content of message to send
 		in := bufio.NewReader(os.Stdin)
@@ -156,7 +155,7 @@ func open_standard_input() {
 
 		defer client.Close()
 
-		divCall := client.Go("Sequencer.Send_packet", &pkt, &res, nil)
+		divCall := client.Go("Sequencer.Send_packet", &pkt, &empty, nil)
 		divCall = <-divCall.Done
 		if divCall.Error != nil {
 			fmt.Println("Error in Sequencer.Send_packet: ", divCall.Error.Error())
