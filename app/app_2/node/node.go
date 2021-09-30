@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"alessandro.it/app/lib"
+	"alessandro.it/app/utils"
 )
 
 type Node int
@@ -127,6 +128,10 @@ func open_standard_input() {
 			fmt.Println("Error in Sequencer.Send_packet: ", divCall.Error.Error())
 		}
 	}
+}
+
+func (node *Node) Send_update(update *utils.Update, ack *utils.Ack) error {
+	return nil
 }
 
 func main() {

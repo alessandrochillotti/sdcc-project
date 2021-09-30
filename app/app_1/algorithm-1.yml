@@ -22,7 +22,7 @@ services:
   node:
     build: 
       context: .
-      dockerfile: node-algorithm-1/Dockerfile
+      dockerfile: node/Dockerfile
       args:
         ALGO: ${ALGO}
     stdin_open: true 
