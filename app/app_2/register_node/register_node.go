@@ -39,7 +39,8 @@ func (reg *Register) Register_node(arg *lib.Whoami, addresses *lib.Addresses) er
 	}
 
 	// Write into file the ip address of registered node
-	if _, err := f.WriteString(arg.Ip_address + "\n"); err != nil {
+	_, err = f.WriteString(arg.Ip_address + "\n")
+	if err != nil {
 		log.Println(err)
 		return err
 	}

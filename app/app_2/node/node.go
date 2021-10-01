@@ -72,7 +72,8 @@ func register_into_group() {
 	build_whoami_struct(&whoami_to_register)
 
 	// Call remote procedure and reply will store the RPC result
-	client.Call("Register.Register_node", &whoami_to_register, &addresses)
+	err = client.Call("Register.Register_node", &whoami_to_register, &addresses)
+	lib.Check_error(err)
 }
 
 /*
@@ -101,7 +102,7 @@ func deliver_packet() {
 	// TODO: implemnt algorithm to deliver packet
 }
 
-func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) {
+func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	// Update my scalar clock
 	scalar_clock = int(math.Max(float64(scalar_clock), float64(update.Timestamp)))
 	scalar_clock = scalar_clock + 1
@@ -112,6 +113,8 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) {
 
 	// Send ack to sender of update message
 	*ack = true
+
+	return nil
 }
 
 func send_update(addr_node string, pkt lib.Packet) error {
