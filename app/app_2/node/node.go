@@ -27,7 +27,7 @@ const MAX_QUEUE = 100
 
 // Global variables
 var scalar_clock int = 0
-var addresses *lib.Addresses /* Contains ip addresses of each node in multicast group */
+var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
 var queue *utils.Queue
 
 /*
@@ -60,6 +60,9 @@ This function allows to register the node to communicate in multicast group
 */
 func register_into_group() {
 	var whoami_to_register lib.Whoami
+	var empty lib.Empty
+
+	build_whoami_struct(&whoami_to_register)
 
 	// The RPC server has ip address set to 10.5.0.254 and it is listening in port 4321
 	addr_register_node := "10.5.0.254:4321"
@@ -69,11 +72,20 @@ func register_into_group() {
 	lib.Check_error(err)
 	defer client.Close()
 
-	build_whoami_struct(&whoami_to_register)
-
 	// Call remote procedure and reply will store the RPC result
-	err = client.Call("Register.Register_node", &whoami_to_register, &addresses)
+	err = client.Call("Register.Register_node", &whoami_to_register, &empty)
 	lib.Check_error(err)
+
+}
+
+func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
+	// Parse the list and put the addresses into destination array
+	addr_tmp := strings.Split(list.List_str, "\n")
+	for i := 0; i < lib.NUMBER_NODES; i++ {
+		addresses[i] = addr_tmp[i]
+	}
+
+	return nil
 }
 
 /*
@@ -158,7 +170,7 @@ func open_standard_input() {
 
 		// Send to each node of group multicast the message
 		for i := 0; i < lib.NUMBER_NODES; i++ {
-			addr_node := addresses.Addresses_array[i] + ":1234"
+			addr_node := addresses[i] + ":1234"
 			fmt.Println("Sto inviando a", addr_node)
 			go send_update(addr_node, pkt)
 		}
