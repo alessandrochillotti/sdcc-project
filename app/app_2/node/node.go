@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"math"
 	"net"
 	"net/rpc"
 	"os"
@@ -111,25 +110,29 @@ func log_message(pkt *lib.Packet, id int) {
 This function check if there are packet to deliver.
 */
 func deliver_packet() {
-	// TODO: implemnt algorithm to deliver packet
+	for {
+		if queue.Get_ack_head() == lib.NUMBER_NODES {
+			fmt.Println("Consegnato", queue.Get_head().Update.Packet.Message)
+			// TODO: consegnare il messaggio a livello applicativo e avvisare gli altri nodi
+		}
+	}
 }
 
 func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
-	// Update my scalar clock
-	scalar_clock = int(math.Max(float64(scalar_clock), float64(update.Timestamp)))
+	scalar_clock = lib.Max(scalar_clock, update.Timestamp)
 	scalar_clock = scalar_clock + 1
 
 	// Put update in queue
-	update_node := &utils.Node{Packet: *update}
+	update_node := &utils.Node{Update: *update, Next: nil, Ack: 0}
 	queue.Update_into_queue(update_node)
 
 	// Send ack to sender of update message
-	*ack = true
+	*ack = *ack + 1
 
 	return nil
 }
 
-func send_update(addr_node string, pkt lib.Packet) error {
+func send_update(addr_node string, update_node *utils.Node) error {
 	// Try to connect to node
 	client, err := rpc.Dial("tcp", addr_node)
 	if err != nil {
@@ -139,18 +142,16 @@ func send_update(addr_node string, pkt lib.Packet) error {
 	defer client.Close()
 
 	// Build update to send
-	scalar_clock = scalar_clock + 1
-	update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
-	var ack utils.Ack = false
+	var ack utils.Ack = 0
 
 	// Delay the send of update message
 	// lib.Delay()
 
-	divCall := client.Go("Node.Get_update", &update, &ack, nil)
-	divCall = <-divCall.Done
-	if divCall.Error != nil {
-		fmt.Println("Error in Node.Get_update: ", divCall.Error.Error())
-	}
+	err = client.Call("Node.Get_update", update_node.Update, &ack)
+	lib.Check_error(err)
+
+	fmt.Println("Ack ricevuto = ", ack)
+	update_node.Ack = update_node.Ack + ack
 
 	return nil
 }
@@ -168,14 +169,22 @@ func open_standard_input() {
 		// Build packet
 		pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
 
+		// Update the scalar clock
+		scalar_clock = scalar_clock + 1
+
+		// Build update to send
+		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
+		update_node := utils.Node{Update: update, Next: nil, Ack: 1}
+		queue.Update_into_queue(&update_node)
+
+		my_ip := getIpAddress()
 		// Send to each node of group multicast the message
 		for i := 0; i < lib.NUMBER_NODES; i++ {
-			addr_node := addresses[i] + ":1234"
-			fmt.Println("Sto inviando a", addr_node)
-			go send_update(addr_node, pkt)
+			if addresses[i] != my_ip {
+				addr_node := addresses[i] + ":1234"
+				go send_update(addr_node, &update_node)
+			}
 		}
-
-		// queue.Display()
 	}
 }
 
@@ -184,6 +193,8 @@ func main() {
 	register_into_group()
 
 	node := new(Node)
+
+	queue = &utils.Queue{}
 
 	// Create file for log of messages
 	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
