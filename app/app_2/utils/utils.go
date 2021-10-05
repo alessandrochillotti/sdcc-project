@@ -31,7 +31,7 @@ type Queue struct {
 
 // This function insert update message into queue maintaining it sorted for timestamp
 func (l *Queue) Update_into_queue(update *Node) {
-	// fmt.Println("Sto inserendo il nodo con id", update.Update.Packet.Id)
+	fmt.Println("Sto inserendo il nodo con id", update.Update.Packet.Id)
 	if l.head == nil {
 		l.head = update
 		l.tail = update
@@ -59,7 +59,7 @@ func (l *Queue) Update_into_queue(update *Node) {
 		l.Set_max_id(update.Update.Packet.Id)
 	}
 
-	// fmt.Println("Ho inserito il nodo con id", update.Update.Packet.Id)
+	fmt.Println("Ho inserito il nodo con id", update.Update.Packet.Id)
 
 	// l.Display()
 }
@@ -69,8 +69,6 @@ func (l *Queue) Ack_node(id int) bool {
 	acked := false
 	current_node := l.head
 
-	// fmt.Println("Sto cercando di dare l'ack al pacchetto con id", id)
-
 	for current_node != nil && current_node.Update.Packet.Id != id {
 		current_node = current_node.Next
 	}
@@ -78,6 +76,7 @@ func (l *Queue) Ack_node(id int) bool {
 	if current_node != nil {
 		current_node.Ack = current_node.Ack + 1
 		acked = true
+		fmt.Println("Ora il numero di ack per il l'id", id, "è", current_node.Ack)
 	}
 
 	return acked
@@ -100,16 +99,18 @@ func (l *Queue) Get_head() *Node {
 // Remove head
 func (l *Queue) Remove_head() {
 	if l.head != nil {
-		// fmt.Println("Sto rimuovendo la testa che ha id", l.head.Update.Packet.Id)
+		fmt.Println("Sto rimuovendo la testa che ha id", l.head.Update.Packet.Id)
 		l.head = l.head.Next
 	}
 }
 
 // Debug function
 func (l *Queue) Display() {
-	for l.head != nil {
+	current_node := l.head
+	for current_node != nil {
 		// fmt.Printf("%v -> %s \n", l.head.Update.Timestamp, l.head.Update.Packet.Message)
-		l.head = l.head.Next
+		fmt.Printf("%v ->  \n", current_node.Update.Packet.Id)
+		current_node = current_node.Next
 	}
 	fmt.Println()
 }

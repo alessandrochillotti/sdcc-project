@@ -7,6 +7,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -110,6 +111,8 @@ func deliver_packet() {
 			deliver := true
 			head_node := queue.Get_head().Update
 
+			fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id)
+
 			for i := 0; i < lib.NUMBER_NODES && deliver == true; i++ {
 				if addresses[i] != getIpAddress() {
 					var deliver_reply lib.Deliver
@@ -172,11 +175,16 @@ func open_standard_input() {
 		my_ip := getIpAddress()
 		for i := 0; i < lib.NUMBER_NODES; i++ {
 			if addresses[i] != my_ip {
-				err := peer[i].Call("Node.Get_update", update_node.Update, &ack)
-				lib.Check_error(err)
+				go send_update(i, update_node.Update, &ack)
 			}
 		}
 	}
+}
+
+func send_update(index int, update_node utils.Update, ack *utils.Ack) {
+	lib.Delay(3)
+	err := peer[index].Call("Node.Get_update", update_node, ack)
+	lib.Check_error(err)
 }
 
 /*
@@ -239,12 +247,15 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 This RPC method of Node allow to receive ack from other nodes of group multicast.
 */
 func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
-	acked := false
-	for acked == false {
+	fmt.Println("Sono entrato dentro Get_ack e sto cercando di dare l'ack al pacchetto con id", *id, "ed il numero di ack finora ricevuti è", queue.Get_ack_head())
+	queue.Display()
+
+	for {
 		if queue.Ack_node(*id) == true {
-			acked = true
+			break
 		}
 	}
+
 	return nil
 }
 
@@ -252,10 +263,11 @@ func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
 This RPC method of Node allow to verify the second condition to deliver packet.
 */
 func (node *Node) Can_deliver(update *utils.Update, deliver *lib.Deliver) error {
-	if utils.Timestamp(update.Timestamp) > queue.Get_min_timestamp() {
-		deliver.Ok = false
-	} else {
+	fmt.Println(utils.Timestamp(update.Timestamp), "vs", queue.Get_min_timestamp())
+	if utils.Timestamp(update.Timestamp) <= queue.Get_min_timestamp() || queue.Get_min_timestamp() == 0 {
 		deliver.Ok = true
+	} else {
+		deliver.Ok = false
 	}
 
 	return nil
@@ -288,12 +300,12 @@ func main() {
 	// Use goroutine to implement a lightweight thread to manage the coming of new messages
 	go receiver.Accept(lis)
 
-	// This goroutine check always if there are packet to deliver
-	go deliver_packet()
-
 	// Setup the connection with the peer of group multicast after the reception of list
 	<-channel_connection
 	setup_connection()
+
+	// This goroutine check always if there are packet to deliver
+	go deliver_packet()
 
 	// The user can insert text to send to each node of group multicast
 	open_standard_input()

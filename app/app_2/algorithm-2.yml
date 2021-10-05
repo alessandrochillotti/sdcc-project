@@ -39,7 +39,7 @@ services:
                #  container, but for the second (third and so on) the port 
                #  8001 is busy
     volumes: 
-      # The following volume is mounted in /var/lib/docker/volumes/app_log_volume/_data/ip_address_log.txt
+      # The following volume is mounted in /var/lib/docker/volumes/app_log_node/_data/ip_address_log.txt
       - log_node:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
     links:
       - register_node
