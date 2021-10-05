@@ -11,6 +11,7 @@ type Update struct {
 	Packet    lib.Packet
 }
 
+type Timestamp int
 type Ack int
 
 /*
@@ -23,8 +24,9 @@ type Node struct {
 }
 
 type Queue struct {
-	head *Node
-	tail *Node
+	Max_id int
+	head   *Node
+	tail   *Node
 }
 
 // This function insert update message into queue maintaining it sorted for timestamp
@@ -52,7 +54,28 @@ func (l *Queue) Update_into_queue(update *Node) {
 		}
 	}
 
-	l.Display()
+	if update.Update.Packet.Id > l.Max_id {
+		l.Max_id = update.Update.Packet.Id
+	}
+
+	// l.Display()
+}
+
+// Put ack for a specific timestamp
+func (l *Queue) Ack_node(id int) bool {
+	acked := false
+	current_node := l.head
+
+	for current_node != nil && current_node.Update.Packet.Id != id {
+		current_node = current_node.Next
+	}
+
+	if current_node != nil {
+		current_node.Ack = current_node.Ack + 1
+		acked = true
+	}
+
+	return acked
 }
 
 // Get number ack of head
@@ -68,7 +91,9 @@ func (l *Queue) Get_ack_head() Ack {
 // Retrive head
 func (l *Queue) Get_head() *Node {
 	head := l.head
-	l.head = l.head.Next
+	if l.head != nil {
+		l.head = l.head.Next
+	}
 
 	return head
 }

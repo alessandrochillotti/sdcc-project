@@ -7,7 +7,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/rpc"
@@ -112,22 +114,68 @@ This function check if there are packet to deliver.
 func deliver_packet() {
 	for {
 		if queue.Get_ack_head() == lib.NUMBER_NODES {
-			fmt.Println("Consegnato", queue.Get_head().Update.Packet.Message)
-			// TODO: consegnare il messaggio a livello applicativo e avvisare gli altri nodi
+			head_node := queue.Get_head().Update
+			// Deliver the packet to application layer
+			log_message(&head_node.Packet, head_node.Timestamp)
+
+			// Clear shell
+			// cmd := exec.Command("clear")
+			// cmd.Stdout = os.Stdout
+			// cmd.Run()
+
+			// Print chat
+			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+			lib.Check_error(err)
+
+			list := string(content)
+
+			print(list)
 		}
 	}
 }
 
+/*
+This function allow to get update from the other node of group multicast
+*/
 func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	scalar_clock = lib.Max(scalar_clock, update.Timestamp)
 	scalar_clock = scalar_clock + 1
 
 	// Put update in queue
-	update_node := &utils.Node{Update: *update, Next: nil, Ack: 0}
+	update_node := &utils.Node{Update: *update, Next: nil, Ack: 1}
 	queue.Update_into_queue(update_node)
 
-	// Send ack to sender of update message
-	*ack = *ack + 1
+	// Send ack message in multicast
+	for i := 0; i < lib.NUMBER_NODES; i++ {
+		addr_node := addresses[i] + ":1234"
+		go send_ack(addr_node, update.Packet.Id)
+	}
+
+	return nil
+}
+
+func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
+	if queue.Ack_node(*id) == true {
+		return nil
+	} else {
+		err := errors.New("Element to acked not found")
+		return err
+	}
+}
+
+func send_ack(addr_node string, id int) error {
+	var empty lib.Empty
+
+	// Try to connect to node
+	client, err := rpc.Dial("tcp", addr_node)
+	if err != nil {
+		log.Println("Error in dialing: ", err)
+		return err
+	}
+	defer client.Close()
+
+	err = client.Call("Node.Get_ack", &id, &empty)
+	lib.Check_error(err)
 
 	return nil
 }
@@ -150,9 +198,6 @@ func send_update(addr_node string, update_node *utils.Node) error {
 	err = client.Call("Node.Get_update", update_node.Update, &ack)
 	lib.Check_error(err)
 
-	fmt.Println("Ack ricevuto = ", ack)
-	update_node.Ack = update_node.Ack + ack
-
 	return nil
 }
 
@@ -167,7 +212,8 @@ func open_standard_input() {
 		text = strings.TrimSpace(text)
 
 		// Build packet
-		pkt := lib.Packet{Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
+		pkt := lib.Packet{Id: queue.Max_id + 1, Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
+		fmt.Println("Ho assegnato id = ", pkt.Id)
 
 		// Update the scalar clock
 		scalar_clock = scalar_clock + 1
@@ -194,7 +240,7 @@ func main() {
 
 	node := new(Node)
 
-	queue = &utils.Queue{}
+	queue = &utils.Queue{Max_id: 0}
 
 	// Create file for log of messages
 	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")

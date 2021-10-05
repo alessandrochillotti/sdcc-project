@@ -22,6 +22,7 @@ type Whoami struct {
 
 // This is a packet that contain the message to send to each node og group multicast
 type Packet struct {
+	Id             int // This is useful to ack the packet
 	Source_address string
 	Source_pid     int
 	Message        string
