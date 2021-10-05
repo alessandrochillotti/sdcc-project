@@ -24,7 +24,7 @@ type Node struct {
 }
 
 type Queue struct {
-	Max_id int
+	max_id int
 	head   *Node
 	tail   *Node
 }
@@ -54,8 +54,8 @@ func (l *Queue) Update_into_queue(update *Node) {
 		}
 	}
 
-	if update.Update.Packet.Id > l.Max_id {
-		l.Max_id = update.Update.Packet.Id
+	if update.Update.Packet.Id > l.Get_max_id() {
+		l.Set_max_id(update.Update.Packet.Id)
 	}
 
 	// l.Display()
@@ -65,6 +65,8 @@ func (l *Queue) Update_into_queue(update *Node) {
 func (l *Queue) Ack_node(id int) bool {
 	acked := false
 	current_node := l.head
+
+	fmt.Println("Sto cercando di dare l'ack al pacchetto con id", id)
 
 	for current_node != nil && current_node.Update.Packet.Id != id {
 		current_node = current_node.Next
@@ -80,29 +82,49 @@ func (l *Queue) Ack_node(id int) bool {
 
 // Get number ack of head
 func (l *Queue) Get_ack_head() Ack {
-	if l.head == nil {
-		return 0
-	} else {
+	if l.head != nil {
 		return l.head.Ack
 	}
 
+	return 0
 }
 
-// Retrive head
+// Get head
 func (l *Queue) Get_head() *Node {
-	head := l.head
+	return l.head
+}
+
+// Remove head
+func (l *Queue) Remove_head() {
 	if l.head != nil {
 		l.head = l.head.Next
 	}
-
-	return head
 }
 
 // Debug function
-func (l Queue) Display() {
+func (l *Queue) Display() {
 	for l.head != nil {
 		fmt.Printf("%v -> %s \n", l.head.Update.Timestamp, l.head.Update.Packet.Message)
 		l.head = l.head.Next
 	}
 	fmt.Println()
+}
+
+// Return the min timestamp that is inserted into queue, so the timestamp of head node
+func (l *Queue) Get_min_timestamp() Timestamp {
+	if l.head != nil {
+		return Timestamp(l.head.Update.Timestamp)
+	}
+
+	return 0
+}
+
+// Set the max id
+func (l *Queue) Set_max_id(id int) {
+	l.max_id = id
+}
+
+// Return the max id that is inserted into queue
+func (l *Queue) Get_max_id() int {
+	return l.max_id
 }

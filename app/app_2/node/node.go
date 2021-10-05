@@ -8,7 +8,6 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -16,6 +15,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"alessandro.it/app/lib"
 	"alessandro.it/app/utils"
@@ -30,6 +30,7 @@ const MAX_QUEUE = 100
 var scalar_clock int = 0
 var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
 var queue *utils.Queue
+var mutex_queue sync.Mutex
 
 /*
 This function return the ip address of current node
@@ -71,12 +72,12 @@ func register_into_group() {
 	// Try to connect to addr_register_node
 	client, err := rpc.Dial("tcp", addr_register_node)
 	lib.Check_error(err)
-	defer client.Close()
 
 	// Call remote procedure and reply will store the RPC result
 	err = client.Call("Register.Register_node", &whoami_to_register, &empty)
 	lib.Check_error(err)
 
+	client.Close()
 }
 
 func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
@@ -88,10 +89,6 @@ func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
 
 	return nil
 }
-
-/*
-	Functions used to develop the algorith number 1:
-*/
 
 /*
 This function log message into file
@@ -114,22 +111,53 @@ This function check if there are packet to deliver.
 func deliver_packet() {
 	for {
 		if queue.Get_ack_head() == lib.NUMBER_NODES {
+			deliver := true
 			head_node := queue.Get_head().Update
-			// Deliver the packet to application layer
-			log_message(&head_node.Packet, head_node.Timestamp)
 
-			// Clear shell
-			// cmd := exec.Command("clear")
-			// cmd.Stdout = os.Stdout
-			// cmd.Run()
+			for i := 0; i < lib.NUMBER_NODES && deliver == true; i++ {
+				if addresses[i] != getIpAddress() {
+					var deliver_reply lib.Deliver
 
-			// Print chat
-			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
-			lib.Check_error(err)
+					addr_node := addresses[i] + ":1234"
 
-			list := string(content)
+					// Try to connect to node
+					client, err := rpc.Dial("tcp", addr_node)
+					if err != nil {
+						log.Println("Error in dialing: ", err)
+					}
 
-			print(list)
+					// Delay the send of update message
+					// lib.Delay()
+
+					err = client.Call("Node.Can_deliver", &head_node, &deliver_reply)
+					lib.Check_error(err)
+
+					// Logic AND between the deliver flag and the reply received from the specific node.
+					deliver = deliver && deliver_reply.Ok
+
+					// Close connection
+					client.Close()
+				}
+			}
+
+			if deliver {
+				// Deliver the packet to application layer
+				log_message(&head_node.Packet, head_node.Timestamp)
+				queue.Remove_head()
+
+				// Clear shell
+				// cmd := exec.Command("clear")
+				// cmd.Stdout = os.Stdout
+				// cmd.Run()
+
+				// Print chat
+				content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+				lib.Check_error(err)
+
+				list := string(content)
+
+				print(list)
+			}
 		}
 	}
 }
@@ -141,9 +169,13 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	scalar_clock = lib.Max(scalar_clock, update.Timestamp)
 	scalar_clock = scalar_clock + 1
 
-	// Put update in queue
+	// Build update node to insert the packet into queue
 	update_node := &utils.Node{Update: *update, Next: nil, Ack: 1}
+
+	// Insert update node into queue
+	mutex_queue.Lock()
 	queue.Update_into_queue(update_node)
+	mutex_queue.Unlock()
 
 	// Send ack message in multicast
 	for i := 0; i < lib.NUMBER_NODES; i++ {
@@ -163,6 +195,16 @@ func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
 	}
 }
 
+func (node *Node) Can_deliver(update *utils.Update, deliver *lib.Deliver) error {
+	if utils.Timestamp(update.Timestamp) > queue.Get_min_timestamp() {
+		deliver.Ok = false
+	} else {
+		deliver.Ok = true
+	}
+
+	return nil
+}
+
 func send_ack(addr_node string, id int) error {
 	var empty lib.Empty
 
@@ -172,10 +214,11 @@ func send_ack(addr_node string, id int) error {
 		log.Println("Error in dialing: ", err)
 		return err
 	}
-	defer client.Close()
 
 	err = client.Call("Node.Get_ack", &id, &empty)
 	lib.Check_error(err)
+
+	client.Close()
 
 	return nil
 }
@@ -187,7 +230,6 @@ func send_update(addr_node string, update_node *utils.Node) error {
 		log.Println("Error in dialing: ", err)
 		return err
 	}
-	defer client.Close()
 
 	// Build update to send
 	var ack utils.Ack = 0
@@ -197,6 +239,8 @@ func send_update(addr_node string, update_node *utils.Node) error {
 
 	err = client.Call("Node.Get_update", update_node.Update, &ack)
 	lib.Check_error(err)
+
+	client.Close()
 
 	return nil
 }
@@ -212,8 +256,9 @@ func open_standard_input() {
 		text = strings.TrimSpace(text)
 
 		// Build packet
-		pkt := lib.Packet{Id: queue.Max_id + 1, Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
-		fmt.Println("Ho assegnato id = ", pkt.Id)
+		mutex_queue.Lock()
+		pkt := lib.Packet{Id: queue.Get_max_id() + 1, Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
+		mutex_queue.Unlock()
 
 		// Update the scalar clock
 		scalar_clock = scalar_clock + 1
@@ -238,9 +283,9 @@ func main() {
 	// For first thing, the node communicates with the register node to register his info
 	register_into_group()
 
+	// Allocate object to use it into program execution
 	node := new(Node)
-
-	queue = &utils.Queue{Max_id: 0}
+	queue = &utils.Queue{}
 
 	// Create file for log of messages
 	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -252,9 +297,10 @@ func main() {
 	err = receiver.RegisterName("Node", node)
 	lib.Check_error(err)
 
-	// Listen for incoming messages on port 4321
+	// Listen for incoming messages on port 1234
 	lis, err := net.Listen("tcp", ":1234")
 	lib.Check_error(err)
+	defer lis.Close()
 
 	// Use goroutine to implement a lightweight thread to manage the coming of new messages
 	go receiver.Accept(lis)

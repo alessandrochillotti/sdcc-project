@@ -35,6 +35,10 @@ type List_of_nodes struct {
 	List_str string
 }
 
+type Deliver struct {
+	Ok bool
+}
+
 /* Utility */
 func Delay() {
 	// Set the initial seed of PRNG
