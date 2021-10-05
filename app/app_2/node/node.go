@@ -7,12 +7,12 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/rpc"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,12 +23,16 @@ import (
 
 type Node int
 
+var channel_connection chan bool
+
 // Constant values
 const MAX_QUEUE = 100
+const MAX_DELAY = 3
 
 // Global variables
 var scalar_clock int = 0
 var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
+var peer [lib.NUMBER_NODES]*rpc.Client
 var queue *utils.Queue
 var mutex_queue sync.Mutex
 
@@ -80,18 +84,8 @@ func register_into_group() {
 	client.Close()
 }
 
-func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
-	// Parse the list and put the addresses into destination array
-	addr_tmp := strings.Split(list.List_str, "\n")
-	for i := 0; i < lib.NUMBER_NODES; i++ {
-		addresses[i] = addr_tmp[i]
-	}
-
-	return nil
-}
-
 /*
-This function log message into file
+This function log message into file.
 */
 func log_message(pkt *lib.Packet, id int) {
 	// Open file into volume docker
@@ -106,7 +100,9 @@ func log_message(pkt *lib.Packet, id int) {
 }
 
 /*
-This function check if there are packet to deliver.
+This function check if there are packet to deliver, so the following conditions must be checked:
+	1. The firse message in the local queue must have acked by every node
+	2. The other node of group must not have a packet with timestamp less than the considering packet to deliver
 */
 func deliver_packet() {
 	for {
@@ -118,25 +114,11 @@ func deliver_packet() {
 				if addresses[i] != getIpAddress() {
 					var deliver_reply lib.Deliver
 
-					addr_node := addresses[i] + ":1234"
-
-					// Try to connect to node
-					client, err := rpc.Dial("tcp", addr_node)
-					if err != nil {
-						log.Println("Error in dialing: ", err)
-					}
-
-					// Delay the send of update message
-					// lib.Delay()
-
-					err = client.Call("Node.Can_deliver", &head_node, &deliver_reply)
+					err := peer[i].Call("Node.Can_deliver", &head_node, &deliver_reply)
 					lib.Check_error(err)
 
 					// Logic AND between the deliver flag and the reply received from the specific node.
 					deliver = deliver && deliver_reply.Ok
-
-					// Close connection
-					client.Close()
 				}
 			}
 
@@ -146,9 +128,9 @@ func deliver_packet() {
 				queue.Remove_head()
 
 				// Clear shell
-				// cmd := exec.Command("clear")
-				// cmd.Stdout = os.Stdout
-				// cmd.Run()
+				cmd := exec.Command("clear")
+				cmd.Stdout = os.Stdout
+				cmd.Run()
 
 				// Print chat
 				content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -163,92 +145,10 @@ func deliver_packet() {
 }
 
 /*
-This function allow to get update from the other node of group multicast
-*/
-func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
-	scalar_clock = lib.Max(scalar_clock, update.Timestamp)
-	scalar_clock = scalar_clock + 1
-
-	// Build update node to insert the packet into queue
-	update_node := &utils.Node{Update: *update, Next: nil, Ack: 1}
-
-	// Insert update node into queue
-	mutex_queue.Lock()
-	queue.Update_into_queue(update_node)
-	mutex_queue.Unlock()
-
-	// Send ack message in multicast
-	for i := 0; i < lib.NUMBER_NODES; i++ {
-		addr_node := addresses[i] + ":1234"
-		go send_ack(addr_node, update.Packet.Id)
-	}
-
-	return nil
-}
-
-func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
-	if queue.Ack_node(*id) == true {
-		return nil
-	} else {
-		err := errors.New("Element to acked not found")
-		return err
-	}
-}
-
-func (node *Node) Can_deliver(update *utils.Update, deliver *lib.Deliver) error {
-	if utils.Timestamp(update.Timestamp) > queue.Get_min_timestamp() {
-		deliver.Ok = false
-	} else {
-		deliver.Ok = true
-	}
-
-	return nil
-}
-
-func send_ack(addr_node string, id int) error {
-	var empty lib.Empty
-
-	// Try to connect to node
-	client, err := rpc.Dial("tcp", addr_node)
-	if err != nil {
-		log.Println("Error in dialing: ", err)
-		return err
-	}
-
-	err = client.Call("Node.Get_ack", &id, &empty)
-	lib.Check_error(err)
-
-	client.Close()
-
-	return nil
-}
-
-func send_update(addr_node string, update_node *utils.Node) error {
-	// Try to connect to node
-	client, err := rpc.Dial("tcp", addr_node)
-	if err != nil {
-		log.Println("Error in dialing: ", err)
-		return err
-	}
-
-	// Build update to send
-	var ack utils.Ack = 0
-
-	// Delay the send of update message
-	// lib.Delay()
-
-	err = client.Call("Node.Get_update", update_node.Update, &ack)
-	lib.Check_error(err)
-
-	client.Close()
-
-	return nil
-}
-
-/*
 This function allow to wait the input of user to send the message to each node of group multicast
 */
 func open_standard_input() {
+	var ack utils.Ack = 0
 	for {
 		// Take in input the content of message to send
 		in := bufio.NewReader(os.Stdin)
@@ -268,15 +168,97 @@ func open_standard_input() {
 		update_node := utils.Node{Update: update, Next: nil, Ack: 1}
 		queue.Update_into_queue(&update_node)
 
-		my_ip := getIpAddress()
 		// Send to each node of group multicast the message
+		my_ip := getIpAddress()
 		for i := 0; i < lib.NUMBER_NODES; i++ {
 			if addresses[i] != my_ip {
-				addr_node := addresses[i] + ":1234"
-				go send_update(addr_node, &update_node)
+				err := peer[i].Call("Node.Get_update", update_node.Update, &ack)
+				lib.Check_error(err)
 			}
 		}
 	}
+}
+
+/*
+This function, after reception of list from register node, allow to setup connection with each node of group multicast.
+*/
+func setup_connection() {
+	var err error
+	for i := 0; i < lib.NUMBER_NODES; i++ {
+		addr_node := addresses[i] + ":1234"
+		peer[i], err = rpc.Dial("tcp", addr_node)
+		if err != nil {
+			log.Println("Error in dialing: ", err)
+			os.Exit(1)
+		}
+	}
+}
+
+/* RPC methods registered by Node */
+
+/*
+This RPC method of Node allow to get list from the registered node.
+*/
+func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
+	// Parse the list and put the addresses into destination array
+	addr_tmp := strings.Split(list.List_str, "\n")
+	for i := 0; i < lib.NUMBER_NODES; i++ {
+		addresses[i] = addr_tmp[i]
+	}
+
+	channel_connection <- true
+
+	return nil
+}
+
+/*
+This RPC method of Node allow to get update from the other node of group multicast
+*/
+func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
+	scalar_clock = lib.Max(scalar_clock, update.Timestamp)
+	scalar_clock = scalar_clock + 1
+
+	// Build update node to insert the packet into queue
+	update_node := &utils.Node{Update: *update, Next: nil, Ack: 1}
+
+	// Insert update node into queue
+	mutex_queue.Lock()
+	queue.Update_into_queue(update_node)
+	mutex_queue.Unlock()
+
+	// Send ack message in multicast
+	for i := 0; i < lib.NUMBER_NODES; i++ {
+		var empty lib.Empty
+		peer[i].Go("Node.Get_ack", &update.Packet.Id, &empty, nil)
+	}
+
+	return nil
+}
+
+/*
+This RPC method of Node allow to receive ack from other nodes of group multicast.
+*/
+func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
+	acked := false
+	for acked == false {
+		if queue.Ack_node(*id) == true {
+			acked = true
+		}
+	}
+	return nil
+}
+
+/*
+This RPC method of Node allow to verify the second condition to deliver packet.
+*/
+func (node *Node) Can_deliver(update *utils.Update, deliver *lib.Deliver) error {
+	if utils.Timestamp(update.Timestamp) > queue.Get_min_timestamp() {
+		deliver.Ok = false
+	} else {
+		deliver.Ok = true
+	}
+
+	return nil
 }
 
 func main() {
@@ -286,6 +268,7 @@ func main() {
 	// Allocate object to use it into program execution
 	node := new(Node)
 	queue = &utils.Queue{}
+	channel_connection = make(chan bool)
 
 	// Create file for log of messages
 	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -307,6 +290,10 @@ func main() {
 
 	// This goroutine check always if there are packet to deliver
 	go deliver_packet()
+
+	// Setup the connection with the peer of group multicast after the reception of list
+	<-channel_connection
+	setup_connection()
 
 	// The user can insert text to send to each node of group multicast
 	open_standard_input()

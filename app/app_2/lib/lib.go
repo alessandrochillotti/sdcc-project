@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -40,11 +41,12 @@ type Deliver struct {
 }
 
 /* Utility */
-func Delay() {
+func Delay(max int) {
 	// Set the initial seed of PRNG
 	rand.Seed(time.Now().UnixNano())
 	// Extract a number that is between 0 and 2
-	n := rand.Intn(3)
+	n := rand.Intn(max)
+	fmt.Println("Aspetto", time.Duration(n)*time.Second, "secondi")
 	// Simule the delay computed above
 	time.Sleep(time.Duration(n) * time.Second)
 }
