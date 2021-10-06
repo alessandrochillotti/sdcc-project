@@ -7,7 +7,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -111,7 +110,7 @@ func deliver_packet() {
 			deliver := true
 			head_node := queue.Get_head().Update
 
-			fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id)
+			// fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id)
 
 			for i := 0; i < lib.NUMBER_NODES && deliver == true; i++ {
 				if addresses[i] != getIpAddress() {
@@ -128,7 +127,10 @@ func deliver_packet() {
 			if deliver {
 				// Deliver the packet to application layer
 				log_message(&head_node.Packet, head_node.Timestamp)
+
+				mutex_queue.Lock()
 				queue.Remove_head()
+				mutex_queue.Unlock()
 
 				// Clear shell
 				cmd := exec.Command("clear")
@@ -159,9 +161,7 @@ func open_standard_input() {
 		text = strings.TrimSpace(text)
 
 		// Build packet
-		mutex_queue.Lock()
 		pkt := lib.Packet{Id: queue.Get_max_id() + 1, Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
-		mutex_queue.Unlock()
 
 		// Update the scalar clock
 		scalar_clock = scalar_clock + 1
@@ -169,7 +169,10 @@ func open_standard_input() {
 		// Build update to send
 		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
 		update_node := utils.Node{Update: update, Next: nil, Ack: 1}
+
+		mutex_queue.Lock()
 		queue.Update_into_queue(&update_node)
+		mutex_queue.Unlock()
 
 		// Send to each node of group multicast the message
 		my_ip := getIpAddress()
@@ -247,8 +250,8 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 This RPC method of Node allow to receive ack from other nodes of group multicast.
 */
 func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
-	fmt.Println("Sono entrato dentro Get_ack e sto cercando di dare l'ack al pacchetto con id", *id, "ed il numero di ack finora ricevuti è", queue.Get_ack_head())
-	queue.Display()
+	// fmt.Println("Sono entrato dentro Get_ack e sto cercando di dare l'ack al pacchetto con id", *id, "ed il numero di ack finora ricevuti è", queue.Get_ack_head())
+	// queue.Display()
 
 	for {
 		if queue.Ack_node(*id) == true {
@@ -263,7 +266,7 @@ func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
 This RPC method of Node allow to verify the second condition to deliver packet.
 */
 func (node *Node) Can_deliver(update *utils.Update, deliver *lib.Deliver) error {
-	fmt.Println(utils.Timestamp(update.Timestamp), "vs", queue.Get_min_timestamp())
+	// fmt.Println(utils.Timestamp(update.Timestamp), "vs", queue.Get_min_timestamp())
 	if utils.Timestamp(update.Timestamp) <= queue.Get_min_timestamp() || queue.Get_min_timestamp() == 0 {
 		deliver.Ok = true
 	} else {
