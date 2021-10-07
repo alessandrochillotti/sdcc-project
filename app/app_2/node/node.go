@@ -7,12 +7,12 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/rpc"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,7 +34,10 @@ var scalar_clock int = 0
 var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
 var peer [lib.NUMBER_NODES]*rpc.Client
 var queue *utils.Queue
+var my_index int
+
 var mutex_queue sync.Mutex
+var mutex_clock sync.Mutex
 
 /*
 This function return the ip address of current node
@@ -106,23 +109,25 @@ This function check if there are packet to deliver, so the following conditions 
 */
 func deliver_packet() {
 	for {
-		if queue.Get_ack_head() == lib.NUMBER_NODES {
+		mutex_queue.Lock()
+		head := queue.Get_head()
+		mutex_queue.Unlock()
+		if head != nil && head.Ack == lib.NUMBER_NODES {
 			deliver := true
-			head_node := queue.Get_head().Update
+			head_node := head.Update
 
-			// fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id)
-
-			for i := 0; i < lib.NUMBER_NODES && deliver == true; i++ {
-				if addresses[i] != getIpAddress() {
-					var deliver_reply lib.Deliver
-
-					err := peer[i].Call("Node.Can_deliver", &head_node, &deliver_reply)
-					lib.Check_error(err)
-
-					// Logic AND between the deliver flag and the reply received from the specific node.
-					deliver = deliver && deliver_reply.Ok
+			fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id, "e timestamp", head_node.Timestamp)
+			queue.Display()
+			for i := 0; i < lib.NUMBER_NODES; i++ {
+				if i != my_index {
+					mutex_queue.Lock()
+					current_max_timestamp := queue.Get_max_timestamp(addresses[i])
+					mutex_queue.Unlock()
+					deliver = deliver && current_max_timestamp > head_node.Timestamp
 				}
 			}
+
+			fmt.Println("Consegno:", deliver)
 
 			if deliver {
 				// Deliver the packet to application layer
@@ -133,9 +138,9 @@ func deliver_packet() {
 				mutex_queue.Unlock()
 
 				// Clear shell
-				cmd := exec.Command("clear")
-				cmd.Stdout = os.Stdout
-				cmd.Run()
+				// cmd := exec.Command("clear")
+				// cmd.Stdout = os.Stdout
+				// cmd.Run()
 
 				// Print chat
 				content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -161,31 +166,28 @@ func open_standard_input() {
 		text = strings.TrimSpace(text)
 
 		// Build packet
-		pkt := lib.Packet{Id: queue.Get_max_id() + 1, Source_address: getIpAddress(), Source_pid: os.Getpid(), Message: text}
-
-		// Update the scalar clock
-		scalar_clock = scalar_clock + 1
-
-		// Build update to send
-		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
-		update_node := utils.Node{Update: update, Next: nil, Ack: 1}
-
 		mutex_queue.Lock()
-		queue.Update_into_queue(&update_node)
+		pkt_id := queue.Get_max_id() + 1
 		mutex_queue.Unlock()
+		pkt := lib.Packet{Id: pkt_id, Source_address: getIpAddress(), Index_pid: my_index, Message: text}
+
+		// Update the scalar clock and build update packet to send
+		mutex_clock.Lock()
+		scalar_clock = scalar_clock + 1
+		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
+		mutex_clock.Unlock()
+
+		update_node := utils.Node{Update: update, Next: nil, Ack: 0}
 
 		// Send to each node of group multicast the message
-		my_ip := getIpAddress()
 		for i := 0; i < lib.NUMBER_NODES; i++ {
-			if addresses[i] != my_ip {
-				go send_update(i, update_node.Update, &ack)
-			}
+			go send_update(i, update_node.Update, &ack)
 		}
 	}
 }
 
 func send_update(index int, update_node utils.Update, ack *utils.Ack) {
-	lib.Delay(3)
+	// lib.Delay(3)
 	err := peer[index].Call("Node.Get_update", update_node, ack)
 	lib.Check_error(err)
 }
@@ -215,6 +217,9 @@ func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
 	addr_tmp := strings.Split(list.List_str, "\n")
 	for i := 0; i < lib.NUMBER_NODES; i++ {
 		addresses[i] = addr_tmp[i]
+		if addresses[i] == getIpAddress() {
+			my_index = i
+		}
 	}
 
 	channel_connection <- true
@@ -226,11 +231,13 @@ func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
 This RPC method of Node allow to get update from the other node of group multicast
 */
 func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
+	mutex_clock.Lock()
 	scalar_clock = lib.Max(scalar_clock, update.Timestamp)
 	scalar_clock = scalar_clock + 1
+	mutex_clock.Unlock()
 
 	// Build update node to insert the packet into queue
-	update_node := &utils.Node{Update: *update, Next: nil, Ack: 1}
+	update_node := &utils.Node{Update: *update, Next: nil, Ack: 0}
 
 	// Insert update node into queue
 	mutex_queue.Lock()
@@ -240,6 +247,7 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	// Send ack message in multicast
 	for i := 0; i < lib.NUMBER_NODES; i++ {
 		var empty lib.Empty
+		fmt.Println("Sto inviando l'ack a", addresses[i])
 		peer[i].Go("Node.Get_ack", &update.Packet.Id, &empty, nil)
 	}
 
@@ -250,28 +258,17 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 This RPC method of Node allow to receive ack from other nodes of group multicast.
 */
 func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
-	// fmt.Println("Sono entrato dentro Get_ack e sto cercando di dare l'ack al pacchetto con id", *id, "ed il numero di ack finora ricevuti è", queue.Get_ack_head())
+	// fmt.Println("Segno l'ack relativo all'id", *id, "che finora ne ha ricevuti", queue.Get_ack_head())
 	// queue.Display()
 
-	for {
-		if queue.Ack_node(*id) == true {
-			break
-		}
+	acked := false
+	for acked == false {
+		mutex_queue.Lock()
+		acked = queue.Ack_node(*id)
+		mutex_queue.Unlock()
 	}
 
-	return nil
-}
-
-/*
-This RPC method of Node allow to verify the second condition to deliver packet.
-*/
-func (node *Node) Can_deliver(update *utils.Update, deliver *lib.Deliver) error {
-	// fmt.Println(utils.Timestamp(update.Timestamp), "vs", queue.Get_min_timestamp())
-	if utils.Timestamp(update.Timestamp) <= queue.Get_min_timestamp() || queue.Get_min_timestamp() == 0 {
-		deliver.Ok = true
-	} else {
-		deliver.Ok = false
-	}
+	fmt.Println("Ho segnato l'ack relativo all'id", *id, ". Ora ne ha", queue.Get_ack_head())
 
 	return nil
 }

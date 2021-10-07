@@ -24,7 +24,7 @@ type Whoami struct {
 type Packet struct {
 	Id             int // This is useful to ack the packet
 	Source_address string
-	Source_pid     int
+	Index_pid      int
 	Message        string
 }
 
@@ -45,7 +45,6 @@ func Delay(max int) {
 	rand.Seed(time.Now().UnixNano())
 	// Extract a number that is between 0 and 2
 	n := rand.Intn(max)
-	// fmt.Println("Aspetto", time.Duration(n)*time.Second, "secondi")
 	// Simule the delay computed above
 	time.Sleep(time.Duration(n) * time.Second)
 }

@@ -66,8 +66,6 @@ func (l *Queue) Update_into_queue(update *Node) {
 	}
 
 	// fmt.Println("Ho inserito il nodo con id", update.Update.Packet.Id)
-
-	// l.Display()
 }
 
 // Put ack for a specific timestamp
@@ -110,6 +108,8 @@ func (l *Queue) Remove_head() {
 		if l.head == nil {
 			l.tail = nil
 		}
+		// fmt.Println("Ora la lista è:")
+		l.Display()
 	}
 }
 
@@ -117,25 +117,30 @@ func (l *Queue) Remove_head() {
 func (l *Queue) Display() {
 	current_node := l.head
 	for current_node != nil {
-		// fmt.Printf("%v -> %s \n", l.head.Update.Timestamp, l.head.Update.Packet.Message)
-		// if current_node == l.head {
-		// 	fmt.Printf("[H]")
-		// } else if current_node == l.tail {
-		// 	fmt.Printf("[T]")
-		// }
-		fmt.Printf("%v -> ", current_node.Update.Packet.Id)
+		if current_node == l.head {
+			fmt.Printf("[H]")
+		} else if current_node == l.tail {
+			fmt.Printf("[T]")
+		}
+		// fmt.Printf("%v -> ", current_node.Update.Packet.Id)
+		fmt.Printf("%v (%v) -> ", current_node.Update.Timestamp, current_node.Update.Packet.Id)
 		current_node = current_node.Next
 	}
 	fmt.Printf("\n")
 }
 
-// Return the min timestamp that is inserted into queue, so the timestamp of head node
-func (l *Queue) Get_min_timestamp() Timestamp {
-	if l.head != nil {
-		return Timestamp(l.head.Update.Timestamp)
+// Return the min timestamp with a specific ip_addr that is inserted into queue
+func (l *Queue) Get_max_timestamp(ip_addr string) int {
+	current_node := l.head
+	timestamp := 0
+	for current_node != nil {
+		if current_node.Update.Packet.Source_address == ip_addr {
+			timestamp = current_node.Update.Timestamp
+		}
+		current_node = current_node.Next
 	}
 
-	return 0
+	return timestamp
 }
 
 // Set the max id
