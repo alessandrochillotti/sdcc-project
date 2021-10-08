@@ -7,8 +7,8 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/rpc"
 	"os"
@@ -19,6 +19,7 @@ import (
 
 	"alessandro.it/app/lib"
 	"alessandro.it/app/utils"
+	"github.com/go-redis/redis"
 )
 
 type Node int
@@ -35,6 +36,7 @@ var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in 
 var peer [lib.NUMBER_NODES]*rpc.Client
 var queue *utils.Queue
 var my_index int
+var client *redis.Client
 
 var mutex_queue sync.Mutex
 var mutex_clock sync.Mutex
@@ -154,9 +156,51 @@ func deliver_packet() {
 }
 
 /*
+This function allow to increment ID packet into Redis container in transactional mode.
+*/
+func increment_id(id *int) {
+	const routineCount = 100
+
+	// Transactionally increments key using GET and SET commands.
+	increment := func(key string) error {
+		txf := func(tx *redis.Tx) error {
+			// get current value or zero
+			n, err := tx.Get("ID").Int()
+			if err != nil && err != redis.Nil {
+				return err
+			}
+
+			// actual opperation (local in optimistic lock)
+			n++
+
+			// runs only if the watched keys remain unchanged
+			_, err = tx.Pipelined(func(pipe redis.Pipeliner) error {
+				// pipe handles the error case
+				pipe.Set(key, n, 0)
+				*id = n
+				return nil
+			})
+			return err
+		}
+
+		for retries := routineCount; retries > 0; retries-- {
+			err := client.Watch(txf, key)
+			if err != redis.TxFailedErr {
+				return err
+			}
+			// optimistic lock lost
+		}
+		return errors.New("increment reached maximum number of retries")
+	}
+
+	increment("ID")
+}
+
+/*
 This function allow to wait the input of user to send the message to each node of group multicast
 */
 func open_standard_input() {
+	var pkt_id int
 	var ack utils.Ack = 0
 	for {
 		// Take in input the content of message to send
@@ -164,10 +208,9 @@ func open_standard_input() {
 		text, _ := in.ReadString('\n')
 		text = strings.TrimSpace(text)
 
+		// Increment ID in transactional mode to Redis container
+		increment_id(&pkt_id)
 		// Build packet
-		mutex_queue.Lock()
-		pkt_id := queue.Get_max_id() + 1
-		mutex_queue.Unlock()
 		pkt := lib.Packet{Id: pkt_id, Source_address: getIpAddress(), Index_pid: my_index, Message: text}
 
 		// Update the scalar clock and build update packet to send
@@ -175,8 +218,6 @@ func open_standard_input() {
 		scalar_clock = scalar_clock + 1
 		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
 		mutex_clock.Unlock()
-
-		// update_node := utils.Node{Update: update, Next: nil, Ack: 0}
 
 		// Send to each node of group multicast the message
 		for i := 0; i < lib.NUMBER_NODES; i++ {
@@ -190,16 +231,19 @@ func open_standard_input() {
 /*
 This function, after reception of list from register node, allow to setup connection with each node of group multicast.
 */
-func setup_connection() {
+func setup_connection() error {
 	var err error
+
 	for i := 0; i < lib.NUMBER_NODES; i++ {
 		addr_node := addresses[i] + ":1234"
 		peer[i], err = rpc.Dial("tcp", addr_node)
-		if err != nil {
-			log.Println("Error in dialing: ", err)
-			os.Exit(1)
+		lib.Check_error(err)
+		if addresses[i] == getIpAddress() {
+			my_index = i
 		}
 	}
+
+	return nil
 }
 
 /* RPC methods registered by Node */
@@ -212,9 +256,6 @@ func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
 	addr_tmp := strings.Split(list.List_str, "\n")
 	for i := 0; i < lib.NUMBER_NODES; i++ {
 		addresses[i] = addr_tmp[i]
-		if addresses[i] == getIpAddress() {
-			my_index = i
-		}
 	}
 
 	channel_connection <- true
@@ -293,12 +334,23 @@ func main() {
 	lib.Check_error(err)
 	defer lis.Close()
 
+	client = redis.NewClient(&redis.Options{
+		Addr:     "10.5.0.250:6379",
+		Password: "password",
+		DB:       0,
+	})
+
+	err = client.Set("ID", 0, 0).Err()
+	lib.Check_error(err)
+
 	// Use goroutine to implement a lightweight thread to manage the coming of new messages
 	go receiver.Accept(lis)
 
 	// Setup the connection with the peer of group multicast after the reception of list
 	<-channel_connection
-	setup_connection()
+	if setup_connection() != nil {
+		os.Exit(1)
+	}
 
 	// This goroutine check always if there are packet to deliver
 	go deliver_packet()

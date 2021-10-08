@@ -40,7 +40,7 @@ func (l *Queue) Update_into_queue(update *Node) {
 		current_node := previous_node
 		inserted := false
 		for current_node != nil && inserted == false {
-			if update.Update.Timestamp < current_node.Update.Timestamp {
+			if (update.Update.Timestamp < current_node.Update.Timestamp) || ((update.Update.Timestamp == current_node.Update.Timestamp) && (update.Update.Packet.Index_pid < current_node.Update.Packet.Index_pid)) {
 				if previous_node != current_node {
 					previous_node.Next = update
 					update.Next = current_node
@@ -116,14 +116,10 @@ func (l *Queue) Remove_head() {
 // Debug function
 func (l *Queue) Display() {
 	current_node := l.head
+	fmt.Println("[timestamp, pid, id]")
 	for current_node != nil {
-		if current_node == l.head {
-			fmt.Printf("[H]")
-		} else if current_node == l.tail {
-			fmt.Printf("[T]")
-		}
 		// fmt.Printf("%v -> ", current_node.Update.Packet.Id)
-		fmt.Printf("%v (%v) -> ", current_node.Update.Timestamp, current_node.Update.Packet.Id)
+		fmt.Printf("[%v, %d, %d] -> ", current_node.Update.Timestamp, current_node.Update.Packet.Index_pid, current_node.Update.Packet.Id)
 		current_node = current_node.Next
 	}
 	fmt.Printf("\n")

@@ -43,6 +43,14 @@ services:
       - log_node:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
     links:
       - register_node
+  redis_peer:
+    image: "redis:alpine"
+    command: redis-server --requirepass password
+    ports:
+     - "6379:6379"
+    networks:
+      my_net:
+        ipv4_address: 10.5.0.250
       
 volumes:
   list_volume:
