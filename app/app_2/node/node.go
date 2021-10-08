@@ -7,12 +7,12 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/rpc"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -116,18 +116,16 @@ func deliver_packet() {
 			deliver := true
 			head_node := head.Update
 
-			fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id, "e timestamp", head_node.Timestamp)
-			queue.Display()
+			// 	fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id, "e timestamp", head_node.Timestamp)
+
 			for i := 0; i < lib.NUMBER_NODES; i++ {
 				if i != my_index {
 					mutex_queue.Lock()
-					current_max_timestamp := queue.Get_max_timestamp(addresses[i])
+					update_max_timestamp := queue.Get_update_max_timestamp(addresses[i])
 					mutex_queue.Unlock()
-					deliver = deliver && current_max_timestamp > head_node.Timestamp
+					deliver = deliver && (update_max_timestamp.Timestamp > head_node.Timestamp || (update_max_timestamp.Timestamp == head_node.Timestamp && head_node.Packet.Index_pid < update_max_timestamp.Packet.Index_pid))
 				}
 			}
-
-			fmt.Println("Consegno:", deliver)
 
 			if deliver {
 				// Deliver the packet to application layer
@@ -138,14 +136,15 @@ func deliver_packet() {
 				mutex_queue.Unlock()
 
 				// Clear shell
-				// cmd := exec.Command("clear")
-				// cmd.Stdout = os.Stdout
-				// cmd.Run()
+				cmd := exec.Command("clear")
+				cmd.Stdout = os.Stdout
+				cmd.Run()
 
 				// Print chat
 				content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
 				lib.Check_error(err)
 
+				// fmt.Println("Consegnato messaggio con timestamp", head_node.Timestamp)
 				list := string(content)
 
 				print(list)
@@ -177,19 +176,15 @@ func open_standard_input() {
 		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
 		mutex_clock.Unlock()
 
-		update_node := utils.Node{Update: update, Next: nil, Ack: 0}
+		// update_node := utils.Node{Update: update, Next: nil, Ack: 0}
 
 		// Send to each node of group multicast the message
 		for i := 0; i < lib.NUMBER_NODES; i++ {
-			go send_update(i, update_node.Update, &ack)
+			lib.Delay(3)
+			err := peer[i].Call("Node.Get_update", &update, &ack)
+			lib.Check_error(err)
 		}
 	}
-}
-
-func send_update(index int, update_node utils.Update, ack *utils.Ack) {
-	// lib.Delay(3)
-	err := peer[index].Call("Node.Get_update", update_node, ack)
-	lib.Check_error(err)
 }
 
 /*
@@ -242,12 +237,13 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	// Insert update node into queue
 	mutex_queue.Lock()
 	queue.Update_into_queue(update_node)
+	queue.Display()
 	mutex_queue.Unlock()
 
 	// Send ack message in multicast
 	for i := 0; i < lib.NUMBER_NODES; i++ {
 		var empty lib.Empty
-		fmt.Println("Sto inviando l'ack a", addresses[i])
+		// fmt.Println("Sto inviando l'ack a", addresses[i])
 		peer[i].Go("Node.Get_ack", &update.Packet.Id, &empty, nil)
 	}
 
@@ -268,7 +264,7 @@ func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
 		mutex_queue.Unlock()
 	}
 
-	fmt.Println("Ho segnato l'ack relativo all'id", *id, ". Ora ne ha", queue.Get_ack_head())
+	// fmt.Println("Ho segnato l'ack relativo all'id", *id, ". Ora ne ha", queue.Get_ack_head())
 
 	return nil
 }

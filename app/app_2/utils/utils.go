@@ -130,17 +130,17 @@ func (l *Queue) Display() {
 }
 
 // Return the min timestamp with a specific ip_addr that is inserted into queue
-func (l *Queue) Get_max_timestamp(ip_addr string) int {
+func (l *Queue) Get_update_max_timestamp(ip_addr string) Update {
 	current_node := l.head
-	timestamp := 0
+	var update_max_timestamp Update
 	for current_node != nil {
 		if current_node.Update.Packet.Source_address == ip_addr {
-			timestamp = current_node.Update.Timestamp
+			update_max_timestamp = current_node.Update
 		}
 		current_node = current_node.Next
 	}
 
-	return timestamp
+	return update_max_timestamp
 }
 
 // Set the max id
