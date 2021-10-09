@@ -24,9 +24,8 @@ type Node struct {
 }
 
 type Queue struct {
-	max_id int
-	head   *Node
-	tail   *Node
+	head *Node
+	tail *Node
 }
 
 // This function insert update message into queue maintaining it sorted for timestamp
@@ -60,12 +59,6 @@ func (l *Queue) Update_into_queue(update *Node) {
 			l.tail.Next = nil
 		}
 	}
-
-	if update.Update.Packet.Id > l.Get_max_id() {
-		l.Set_max_id(update.Update.Packet.Id)
-	}
-
-	// fmt.Println("Ho inserito il nodo con id", update.Update.Packet.Id)
 }
 
 // Put ack for a specific timestamp
@@ -137,14 +130,4 @@ func (l *Queue) Get_update_max_timestamp(ip_addr string) Update {
 	}
 
 	return update_max_timestamp
-}
-
-// Set the max id
-func (l *Queue) Set_max_id(id int) {
-	l.max_id = id
-}
-
-// Return the max id that is inserted into queue
-func (l *Queue) Get_max_id() int {
-	return l.max_id
 }
