@@ -8,12 +8,14 @@ package main
 import (
 	"bufio"
 	"errors"
+	"io/ioutil"
 	"net"
 	"net/rpc"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"alessandro.it/app/lib"
 	"alessandro.it/app/utils"
@@ -29,7 +31,7 @@ const MAX_QUEUE = 100
 const MAX_DELAY = 3
 
 // Global variables
-var vector_clock utils.Vector_clock
+var vector_clock *utils.Vector_clock
 var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
 var peer [lib.NUMBER_NODES]*rpc.Client
 var queue *utils.Queue
@@ -108,7 +110,45 @@ This function check if there are packet to deliver, so the following conditions 
 	2. The other node of group must not have a packet with timestamp less than the considering packet to deliver
 */
 func deliver_packet() {
-	// TODO: implement delivery
+	for {
+		mutex_queue.Lock()
+		node_to_deliver := queue.Get_head()
+		mutex_queue.Unlock()
+		deliver := true
+		index_pid_to_deliver := 0
+		if node_to_deliver == nil {
+			deliver = false
+		} else {
+			index_pid_to_deliver = node_to_deliver.Update.Packet.Index_pid
+		}
+
+		if deliver && node_to_deliver.Update.Timestamp.Clocks[index_pid_to_deliver] == vector_clock.Clocks[index_pid_to_deliver]+1 {
+			for k := 0; k < lib.NUMBER_NODES && deliver; k++ {
+				if k != index_pid_to_deliver && node_to_deliver.Update.Timestamp.Clocks[k] > vector_clock.Clocks[k] {
+					deliver = false
+				}
+			}
+		}
+
+		if deliver {
+			log_message(&node_to_deliver.Update.Packet, node_to_deliver.Update.Packet.Id)
+			queue.Remove_node(node_to_deliver.Update.Packet.Id)
+
+			// Clear shell
+			// cmd := exec.Command("clear")
+			// cmd.Stdout = os.Stdout
+			// cmd.Run()
+
+			// Print chat
+			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+			lib.Check_error(err)
+
+			// fmt.Println("Consegnato messaggio con timestamp", head_node.Timestamp)
+			list := string(content)
+
+			print(list)
+		}
+	}
 }
 
 /*
@@ -172,12 +212,15 @@ func open_standard_input() {
 		// Update the scalar clock and build update packet to send
 		mutex_clock.Lock()
 		vector_clock.Increment(my_index)
-		update := utils.Update{Timestamp: vector_clock, Packet: pkt}
+		update := utils.Update{Timestamp: *vector_clock, Packet: pkt}
 		mutex_clock.Unlock()
 
 		// Send to each node of group multicast the message
 		for i := 0; i < lib.NUMBER_NODES; i++ {
-			lib.Delay(3)
+			// lib.Delay(3)
+			if pkt_id == 1 && i == 2 {
+				time.Sleep(time.Duration(10) * time.Second)
+			}
 			err := peer[i].Call("Node.Get_update", &update, &ack)
 			lib.Check_error(err)
 		}
@@ -223,45 +266,23 @@ func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
 This RPC method of Node allow to get update from the other node of group multicast
 */
 func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
-	mutex_clock.Lock()
-	vector_clock.Update_with_max(update.Timestamp)
-	vector_clock.Increment(my_index)
-	mutex_clock.Unlock()
+	if update.Packet.Source_address != getIpAddress() {
+		mutex_clock.Lock()
+		vector_clock.Update_with_max(update.Timestamp)
+		// vector_clock.Increment(my_index)
+		mutex_clock.Unlock()
+	}
 
 	// Build update node to insert the packet into queue
 	update_node := &utils.Node{Update: *update, Next: nil, Ack: 0}
 
 	// Insert update node into queue
 	mutex_queue.Lock()
-	queue.Update_into_queue(update_node)
-	queue.Display()
+	queue.Append(update_node)
+	// queue.Display()
 	mutex_queue.Unlock()
 
-	// Send ack message in multicast
-	for i := 0; i < lib.NUMBER_NODES; i++ {
-		var empty lib.Empty
-		// fmt.Println("Sto inviando l'ack a", addresses[i])
-		peer[i].Go("Node.Get_ack", &update.Packet.Id, &empty, nil)
-	}
-
-	return nil
-}
-
-/*
-This RPC method of Node allow to receive ack from other nodes of group multicast.
-*/
-func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
-	// fmt.Println("Segno l'ack relativo all'id", *id, "che finora ne ha ricevuti", queue.Get_ack_head())
-	// queue.Display()
-
-	acked := false
-	for acked == false {
-		mutex_queue.Lock()
-		acked = queue.Ack_node(*id)
-		mutex_queue.Unlock()
-	}
-
-	// fmt.Println("Ho segnato l'ack relativo all'id", *id, ". Ora ne ha", queue.Get_ack_head())
+	vector_clock.Print()
 
 	return nil
 }
@@ -300,6 +321,7 @@ func main() {
 	lib.Check_error(err)
 
 	// Initialize vector clock
+	vector_clock = new(utils.Vector_clock)
 	vector_clock.Init()
 
 	// Use goroutine to implement a lightweight thread to manage the coming of new messages
