@@ -7,7 +7,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/rpc"
@@ -23,6 +22,7 @@ type Node int
 
 // Constant values
 const MAX_PACKET_BUFFERED = 100
+const MAX_DELAY = 3
 
 // Global variables
 var current_id = 0
@@ -155,11 +155,10 @@ func open_standard_input() {
 
 		defer client.Close()
 
-		divCall := client.Go("Sequencer.Send_packet", &pkt, &empty, nil)
-		divCall = <-divCall.Done
-		if divCall.Error != nil {
-			fmt.Println("Error in Sequencer.Send_packet: ", divCall.Error.Error())
-		}
+		lib.Delay(MAX_DELAY)
+
+		err = client.Call("Sequencer.Send_packet", &pkt, &empty)
+		lib.Check_error(err)
 	}
 }
 

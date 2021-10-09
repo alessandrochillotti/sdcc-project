@@ -9,11 +9,9 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"net/rpc"
 	"os"
-	"time"
 
 	"alessandro.it/app/lib"
 )
@@ -42,13 +40,6 @@ func send_multicast_message(ip_address string, arg *lib.Packet, empty *lib.Empty
 		return err
 	}
 	defer client.Close()
-
-	// Set the initial seed of PRNG
-	rand.Seed(time.Now().UnixNano())
-	// Extract a number that is between 0 and 2
-	n := rand.Intn(3)
-	// Simule the delay computed above
-	time.Sleep(time.Duration(n) * time.Second)
 
 	// Call remote procedure and reply will store the RPC result
 	err = client.Call("Node.Get_Message", &pkt_seq, &empty)
@@ -106,6 +97,9 @@ func main() {
 	go sequencer.Accept(lis)
 
 	for {
-		// TODO: implement a control that if nobody is up, then sequencer exit
+		/*
+			Since that the partnership is static, the sequencer stay up and running for all time
+			without looking if a peer is up or down.
+		*/
 	}
 }

@@ -1,6 +1,10 @@
 package lib
 
-import "log"
+import (
+	"log"
+	"math/rand"
+	"time"
+)
 
 /* Constant values */
 const NUMBER_NODES = 3
@@ -36,6 +40,14 @@ type Addresses struct {
 }
 
 /* Utility */
+func Delay(max int) {
+	// Set the initial seed of PRNG
+	rand.Seed(time.Now().UnixNano())
+	// Extract a number that is between 0 and 2
+	n := rand.Intn(max)
+	// Simule the delay computed above
+	time.Sleep(time.Duration(n) * time.Second)
+}
 
 // This function allow to verify if there is error and return it
 func Check_error(err error) error {
