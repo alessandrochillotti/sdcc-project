@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"alessandro.it/app/lib"
 	"alessandro.it/app/utils"
@@ -30,14 +31,29 @@ var channel_connection chan bool
 const MAX_QUEUE = 100
 const MAX_DELAY = 3
 
-// Global variables
+/*
+Global variables
+*/
+var my_index int
+
+// Algorithm 1 global variables
+var current_id = 0
+var buffer chan (lib.Packet_sequencer)
+
+// Algorithm 2 global variables
 var scalar_clock int = 0
 var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
-var peer [lib.NUMBER_NODES]*rpc.Client
 var queue *utils.Queue
-var my_index int
+
+// Algorithm 3 global variables
+var vector_clock *utils.Vector_clock
+var queue_2 *utils.Queue_2
+
+// Connection variables
+var peer [lib.NUMBER_NODES]*rpc.Client
 var client *redis.Client
 
+// Mutex variables
 var mutex_queue sync.Mutex
 var mutex_clock sync.Mutex
 
@@ -105,11 +121,44 @@ func log_message(pkt *lib.Packet, id int) {
 }
 
 /*
+Algorithm: 1
+
+This function check if there are packet to deliver.
+*/
+func deliver_packet_1() {
+	for {
+		current_packet := <-buffer
+		if current_id+1 == current_packet.Id { // If the packet is the expected packet
+			current_id = current_id + 1
+
+			log_message(&current_packet.Pkt, current_packet.Id)
+
+			// Clear shell
+			cmd := exec.Command("clear")
+			cmd.Stdout = os.Stdout
+			cmd.Run()
+
+			// Print chat
+			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+			lib.Check_error(err)
+
+			list := string(content)
+
+			print(list)
+		} else {
+			buffer <- current_packet
+		}
+	}
+}
+
+/*
+Algorithm: 2
+
 This function check if there are packet to deliver, so the following conditions must be checked:
 	1. The firse message in the local queue must have acked by every node
 	2. The other node of group must not have a packet with timestamp less than the considering packet to deliver
 */
-func deliver_packet() {
+func deliver_packet_2() {
 	for {
 		mutex_queue.Lock()
 		head := queue.Get_head()
@@ -156,6 +205,60 @@ func deliver_packet() {
 }
 
 /*
+Algorithm: 3
+
+This function check if there are packet to deliver, so the following conditions must be checked:
+	1. The message inviato from p_j to current process is the expected message from p_j.
+	2. The current process has seen every messahe that p_j has seen.
+*/
+func deliver_packet_3() {
+	current_index := 1
+	for {
+		mutex_queue.Lock()
+		node_to_deliver := queue_2.Get_node(current_index)
+		mutex_queue.Unlock()
+		deliver := true
+		index_pid_to_deliver := 0
+		if node_to_deliver == nil {
+			deliver = false
+		} else {
+			index_pid_to_deliver = node_to_deliver.Update.Packet.Index_pid
+			current_index = current_index + 1
+		}
+
+		if deliver && node_to_deliver.Update.Timestamp.Clocks[index_pid_to_deliver] == vector_clock.Clocks[index_pid_to_deliver]+1 {
+			for k := 0; k < lib.NUMBER_NODES && deliver; k++ {
+				if k != index_pid_to_deliver && node_to_deliver.Update.Timestamp.Clocks[k] > vector_clock.Clocks[k] {
+					deliver = false
+				}
+			}
+		}
+
+		if deliver {
+			vector_clock.Update_with_max(node_to_deliver.Update.Timestamp)
+			log_message(&node_to_deliver.Update.Packet, node_to_deliver.Update.Packet.Id)
+			queue_2.Remove_node(node_to_deliver.Update.Packet.Id)
+
+			// Clear shell
+			cmd := exec.Command("clear")
+			cmd.Stdout = os.Stdout
+			cmd.Run()
+
+			// Print chat
+			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+			lib.Check_error(err)
+
+			// fmt.Println("Consegnato messaggio con timestamp", head_node.Timestamp)
+			list := string(content)
+
+			print(list)
+		}
+	}
+}
+
+/*
+Algorithm: 2, 3
+
 This function allow to increment ID packet into Redis container in transactional mode.
 */
 func increment_id(id *int) {
@@ -197,9 +300,43 @@ func increment_id(id *int) {
 }
 
 /*
+Algorithm: 1
+
 This function allow to wait the input of user to send the message to each node of group multicast
 */
-func open_standard_input() {
+func open_standard_input_1() {
+	var empty lib.Empty
+	for {
+		// Take in input the content of message to send
+		in := bufio.NewReader(os.Stdin)
+		text, err := in.ReadString('\n')
+		text = strings.TrimSpace(text)
+
+		// Build packet to send
+		pkt := lib.Packet{Source_address: getIpAddress(), Message: text}
+
+		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 4321
+		addr_sequencer_node := "10.5.0.253:4321"
+
+		// Try to connect to addr_register_node
+		client, err := rpc.Dial("tcp", addr_sequencer_node)
+		lib.Check_error(err)
+
+		defer client.Close()
+
+		lib.Delay(MAX_DELAY)
+
+		err = client.Call("Sequencer.Send_packet", &pkt, &empty)
+		lib.Check_error(err)
+	}
+}
+
+/*
+Algorithm: 2
+
+This function allow to wait the input of user to send the message to each node of group multicast
+*/
+func open_standard_input_2() {
 	var pkt_id int
 	var ack utils.Ack = 0
 	for {
@@ -229,6 +366,48 @@ func open_standard_input() {
 }
 
 /*
+Algorithm: 3
+
+This function allow to wait the input of user to send the message to each node of group multicast
+*/
+func open_standard_input_3() {
+	var pkt_id int
+	var ack utils.Ack = 0
+	for {
+		// Take in input the content of message to send
+		in := bufio.NewReader(os.Stdin)
+		text, _ := in.ReadString('\n')
+		text = strings.TrimSpace(text)
+
+		// Increment ID in transactional mode to Redis container
+		increment_id(&pkt_id)
+		// Build packet
+		pkt := lib.Packet{Id: pkt_id, Source_address: getIpAddress(), Index_pid: my_index, Message: text}
+
+		// Update the scalar clock and build update packet to send
+		mutex_clock.Lock()
+		vector_clock.Increment(my_index)
+		update := utils.Update_2{Timestamp: *vector_clock, Packet: pkt}
+		mutex_clock.Unlock()
+
+		// Send to each node of group multicast the message
+		for i := 0; i < lib.NUMBER_NODES; i++ {
+			// lib.Delay(3)
+			/*
+				The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
+			*/
+			if pkt_id == 1 && i == 2 {
+				time.Sleep(time.Duration(10) * time.Second)
+			}
+			err := peer[i].Call("Node.Get_update_2", &update, &ack)
+			lib.Check_error(err)
+		}
+	}
+}
+
+/*
+Algorithm: 2, 3
+
 This function, after reception of list from register node, allow to setup connection with each node of group multicast.
 */
 func setup_connection() error {
@@ -249,6 +428,8 @@ func setup_connection() error {
 /* RPC methods registered by Node */
 
 /*
+Algorithm: 2, 3
+
 This RPC method of Node allow to get list from the registered node.
 */
 func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
@@ -264,6 +445,8 @@ func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
 }
 
 /*
+Algorithm: 2
+
 This RPC method of Node allow to get update from the other node of group multicast
 */
 func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
@@ -292,6 +475,33 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 }
 
 /*
+This RPC method of Node allow to get update from the other node of group multicast
+*/
+func (node *Node) Get_update_2(update *utils.Update_2, ack *utils.Ack) error {
+	if update.Packet.Source_address != getIpAddress() {
+		mutex_clock.Lock()
+		// vector_clock.Update_with_max(update.Timestamp)
+		// vector_clock.Increment(my_index)
+		mutex_clock.Unlock()
+	}
+
+	// Build update node to insert the packet into queue
+	update_node := &utils.Node_2{Update: *update, Next: nil, Ack: 0}
+
+	// Insert update node into queue
+	mutex_queue.Lock()
+	queue_2.Append(update_node)
+	// queue.Display()
+	mutex_queue.Unlock()
+
+	vector_clock.Print()
+
+	return nil
+}
+
+/*
+Algorithm: 2
+
 This RPC method of Node allow to receive ack from other nodes of group multicast.
 */
 func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
@@ -310,13 +520,41 @@ func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
 	return nil
 }
 
+/*
+Algorithm: 1
+
+This function is called by sequencer node for sending message: the message is received, not delivered.
+*/
+func (node *Node) Get_Message(pkt *lib.Packet_sequencer, empty *lib.Empty) error {
+	// The packet is received, so it is buffered
+	buffer <- *pkt
+
+	return nil
+}
+
+/*
+Algorithm: 2, 3
+
+This function allow to init the connection to communicate with Redis container.
+*/
+func init_redis() error {
+	client = redis.NewClient(&redis.Options{
+		Addr:     "10.5.0.250:6379",
+		Password: "password",
+		DB:       0,
+	})
+
+	return client.Set("ID", 0, 0).Err()
+}
+
 func main() {
+	algorithm, _ := strconv.Atoi(os.Args[1])
+
 	// For first thing, the node communicates with the register node to register his info
 	register_into_group()
 
 	// Allocate object to use it into program execution
 	node := new(Node)
-	queue = &utils.Queue{}
 	channel_connection = make(chan bool)
 
 	// Create file for log of messages
@@ -334,14 +572,27 @@ func main() {
 	lib.Check_error(err)
 	defer lis.Close()
 
-	client = redis.NewClient(&redis.Options{
-		Addr:     "10.5.0.250:6379",
-		Password: "password",
-		DB:       0,
-	})
+	// Setup Redis connection
+	if algorithm != 1 {
+		init_redis()
+	}
 
-	err = client.Set("ID", 0, 0).Err()
-	lib.Check_error(err)
+	// Setup counter
+	switch algorithm {
+	case 1:
+		buffer = make(chan lib.Packet_sequencer, MAX_QUEUE)
+		current_id = 0
+		break
+	case 2:
+		queue = &utils.Queue{}
+		scalar_clock = 0
+		break
+	case 3:
+		queue_2 = &utils.Queue_2{}
+		vector_clock = new(utils.Vector_clock)
+		vector_clock.Init()
+		break
+	}
 
 	// Use goroutine to implement a lightweight thread to manage the coming of new messages
 	go receiver.Accept(lis)
@@ -352,9 +603,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	// This goroutine check always if there are packet to deliver
-	go deliver_packet()
-
-	// The user can insert text to send to each node of group multicast
-	open_standard_input()
+	switch algorithm {
+	case 1:
+		go deliver_packet_1()
+		open_standard_input_1()
+		break
+	case 2:
+		go deliver_packet_2()
+		open_standard_input_2()
+		break
+	case 3:
+		go deliver_packet_3()
+		open_standard_input_3()
+		break
+	}
 }

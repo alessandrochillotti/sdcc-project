@@ -1,3 +1,8 @@
+/*
+This file contains the library to:
+	1. Manage the list of update message sorted by timestamp (i.e. ALGO 2)
+	2. Manage the list of pending messages (i.e. ALGO 3)
+*/
 package utils
 
 import (
@@ -6,12 +11,18 @@ import (
 	"alessandro.it/app/lib"
 )
 
+type Timestamp int
+
 type Update struct {
 	Timestamp int
 	Packet    lib.Packet
 }
 
-type Timestamp int
+type Update_2 struct {
+	Timestamp Vector_clock
+	Packet    lib.Packet
+}
+
 type Ack int
 
 /*
@@ -23,9 +34,20 @@ type Node struct {
 	Ack    Ack
 }
 
+type Node_2 struct {
+	Update Update_2
+	Next   *Node_2
+	Ack    Ack
+}
+
 type Queue struct {
 	head *Node
 	tail *Node
+}
+
+type Queue_2 struct {
+	head *Node_2
+	tail *Node_2
 }
 
 // This function insert update message into queue maintaining it sorted for timestamp
@@ -93,6 +115,17 @@ func (l *Queue) Get_head() *Node {
 	return l.head
 }
 
+// This function insert update message into queue maintaining it sorted for timestamp
+func (l *Queue_2) Append(update *Node_2) {
+	if l.head == nil {
+		l.head = update
+		l.tail = update
+	} else {
+		l.tail.Next = update
+		l.tail = update
+	}
+}
+
 // Remove head
 func (l *Queue) Remove_head() {
 	if l.head != nil {
@@ -104,6 +137,28 @@ func (l *Queue) Remove_head() {
 		// fmt.Println("Ora la lista è:")
 		l.Display()
 	}
+}
+
+// Remove head
+func (l *Queue_2) Remove_node(id int) bool {
+	current_node := l.head
+	previous_node := current_node
+
+	for current_node != nil {
+		if current_node.Update.Packet.Id == id {
+			if current_node == l.head {
+				l.head = l.head.Next
+			} else {
+				previous_node.Next = current_node.Next
+			}
+
+			return true
+		}
+		previous_node = current_node
+		current_node = current_node.Next
+	}
+
+	return false
 }
 
 // Debug function
@@ -130,4 +185,18 @@ func (l *Queue) Get_update_max_timestamp(ip_addr string) Update {
 	}
 
 	return update_max_timestamp
+}
+
+// This function return the head of queue
+func (l *Queue_2) Get_node(id int) *Node_2 {
+	current_node := l.head
+
+	for current_node != nil {
+		if current_node.Update.Packet.Id == id {
+			return current_node
+		}
+		current_node = current_node.Next
+	}
+
+	return nil
 }

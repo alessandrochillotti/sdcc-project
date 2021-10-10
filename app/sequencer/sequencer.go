@@ -31,7 +31,7 @@ func send_multicast_message(ip_address string, arg *lib.Packet, empty *lib.Empty
 	pkt_seq := lib.Packet_sequencer{Id: current_id, Pkt: *arg}
 
 	//Compute address destination
-	addr_node := ip_address + ":4321"
+	addr_node := ip_address + ":1234"
 
 	// Try to connect to addr_register_node
 	client, err := rpc.Dial("tcp", addr_node)

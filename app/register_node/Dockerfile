@@ -2,8 +2,8 @@ FROM golang:1.16-alpine
 
 WORKDIR /app
 
-COPY ./register_node/register_node-1.go ./register_node/register_node.go
-COPY ./lib/lib-1.go ./lib/lib.go
+COPY ./register_node/ ./register_node/
+COPY ./lib/ ./lib/
 
 RUN go mod init alessandro.it/app \
     && go mod tidy \
