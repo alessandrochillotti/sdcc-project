@@ -10,7 +10,7 @@ services:
   register_node:
     build: 
       context: .
-      dockerfile: register_node/Dockerfile
+      dockerfile: "register_node/${REGISTER_DOCKERFILE}"
     networks:
       my_net:
         ipv4_address: 10.5.0.254
@@ -22,7 +22,7 @@ services:
   node:
     build: 
       context: .
-      dockerfile: node/Dockerfile
+      dockerfile: "node/${NODE_DOCKERFILE}"
       args:
         ALGO: ${ALGO}
     stdin_open: true 
@@ -39,11 +39,25 @@ services:
                #  container, but for the second (third and so on) the port 
                #  8001 is busy
     volumes: 
-      # The following volume is mounted in /var/lib/docker/volumes/app_log_node/_data/ip_address_log.txt
+      # The following volume is mounted in /var/lib/docker/volumes/app_log_volume/_data/ip_address_log.txt
       - log_node:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
     links:
       - register_node
-  redis_peer:
+  sequencer_node:
+    build: 
+      context: .
+      dockerfile: sequencer/Dockerfile
+    networks:
+      my_net:
+        ipv4_address: 10.5.0.253
+    ports:
+      - "8001:4321" # This maps port 8000 of my host to port 4321 of container
+    volumes:
+      # The following volume is mounted in /var/lib/docker/volumes/app_log_volume/_data/nodes.txt
+      - list_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
+    profiles:
+      - sequencer
+  redis_node:
     image: "redis:alpine"
     command: redis-server --requirepass password
     ports:
@@ -51,6 +65,8 @@ services:
     networks:
       my_net:
         ipv4_address: 10.5.0.250
+    profiles:
+      - no_sequencer
       
 volumes:
   list_volume:

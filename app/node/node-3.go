@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"alessandro.it/app/lib"
 	"alessandro.it/app/utils"
@@ -220,13 +221,13 @@ func open_standard_input() {
 
 		// Send to each node of group multicast the message
 		for i := 0; i < lib.NUMBER_NODES; i++ {
-			lib.Delay(3)
+			// lib.Delay(3)
 			/*
 				The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
 			*/
-			// if pkt_id == 1 && i == 2 {
-			// 	time.Sleep(time.Duration(10) * time.Second)
-			// }
+			if pkt_id == 1 && i == 2 {
+				time.Sleep(time.Duration(10) * time.Second)
+			}
 			err := peer[i].Call("Node.Get_update", &update, &ack)
 			lib.Check_error(err)
 		}

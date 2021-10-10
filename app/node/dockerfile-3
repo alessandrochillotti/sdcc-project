@@ -5,9 +5,10 @@ ENV ALGORITHM ${ALGO}
 
 WORKDIR /app
 
-COPY ./node/node.go ./node/
-COPY ./lib ./lib
-COPY ./utils ./utils
+COPY ./node/node-3.go ./node/node.go
+COPY ./lib/lib-23.go ./lib/lib.go
+COPY ./utils/utils-3.go ./utils/utils.go
+COPY ./utils/vector_clock.go ./utils/vector_clock.go
 
 RUN go mod init alessandro.it/app \
     && go mod tidy \

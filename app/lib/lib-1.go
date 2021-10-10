@@ -39,6 +39,10 @@ type Addresses struct {
 	Addresses [NUMBER_NODES]string
 }
 
+type Deliver struct {
+	Ok bool
+}
+
 /* Utility */
 func Delay(max int) {
 	// Set the initial seed of PRNG
@@ -55,4 +59,12 @@ func Check_error(err error) error {
 		log.Printf("unable to read file: %v", err)
 	}
 	return err
+}
+
+// This function returns the larger of x or y
+func Max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
 }

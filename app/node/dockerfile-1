@@ -5,8 +5,8 @@ ENV ALGORITHM ${ALGO}
 
 WORKDIR /app
 
-COPY ./node/node.go ./node/
-COPY ./lib ./lib
+COPY ./node/node-1.go ./node/node.go
+COPY ./lib/lib-1.go ./lib/lib.go
 
 RUN go mod init alessandro.it/app \
     && go mod tidy \

@@ -3,7 +3,7 @@ FROM golang:1.16-alpine
 WORKDIR /app
 
 COPY ./sequencer/sequencer.go ./sequencer/
-COPY ./lib ./lib
+COPY ./lib/lib-1.go ./lib/lib.go
 
 RUN go mod init alessandro.it/app \
     && go mod tidy \
