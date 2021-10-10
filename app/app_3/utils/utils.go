@@ -76,6 +76,15 @@ func (l *Queue) Display() {
 }
 
 // This function return the head of queue
-func (l *Queue) Get_head() *Node {
-	return l.head
+func (l *Queue) Get_node(id int) *Node {
+	current_node := l.head
+
+	for current_node != nil {
+		if current_node.Update.Packet.Id == id {
+			return current_node
+		}
+		current_node = current_node.Next
+	}
+
+	return nil
 }

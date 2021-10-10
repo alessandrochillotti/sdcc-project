@@ -9,7 +9,7 @@ import (
 const NUMBER_PEER = lib.NUMBER_NODES
 
 type Vector_clock struct {
-	Clocks [NUMBER_PEER]int
+	Clocks [lib.NUMBER_NODES]int
 }
 
 func (v *Vector_clock) Init() {

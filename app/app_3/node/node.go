@@ -12,10 +12,10 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"alessandro.it/app/lib"
 	"alessandro.it/app/utils"
@@ -106,13 +106,14 @@ func log_message(pkt *lib.Packet, id int) {
 
 /*
 This function check if there are packet to deliver, so the following conditions must be checked:
-	1. The firse message in the local queue must have acked by every node
-	2. The other node of group must not have a packet with timestamp less than the considering packet to deliver
+	1. The message inviato from p_j to current process is the expected message from p_j.
+	2. The current process has seen every messahe that p_j has seen.
 */
 func deliver_packet() {
+	current_index := 1
 	for {
 		mutex_queue.Lock()
-		node_to_deliver := queue.Get_head()
+		node_to_deliver := queue.Get_node(current_index)
 		mutex_queue.Unlock()
 		deliver := true
 		index_pid_to_deliver := 0
@@ -120,6 +121,7 @@ func deliver_packet() {
 			deliver = false
 		} else {
 			index_pid_to_deliver = node_to_deliver.Update.Packet.Index_pid
+			current_index = current_index + 1
 		}
 
 		if deliver && node_to_deliver.Update.Timestamp.Clocks[index_pid_to_deliver] == vector_clock.Clocks[index_pid_to_deliver]+1 {
@@ -131,13 +133,14 @@ func deliver_packet() {
 		}
 
 		if deliver {
+			vector_clock.Update_with_max(node_to_deliver.Update.Timestamp)
 			log_message(&node_to_deliver.Update.Packet, node_to_deliver.Update.Packet.Id)
 			queue.Remove_node(node_to_deliver.Update.Packet.Id)
 
 			// Clear shell
-			// cmd := exec.Command("clear")
-			// cmd.Stdout = os.Stdout
-			// cmd.Run()
+			cmd := exec.Command("clear")
+			cmd.Stdout = os.Stdout
+			cmd.Run()
 
 			// Print chat
 			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
@@ -217,10 +220,13 @@ func open_standard_input() {
 
 		// Send to each node of group multicast the message
 		for i := 0; i < lib.NUMBER_NODES; i++ {
-			// lib.Delay(3)
-			if pkt_id == 1 && i == 2 {
-				time.Sleep(time.Duration(10) * time.Second)
-			}
+			lib.Delay(3)
+			/*
+				The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
+			*/
+			// if pkt_id == 1 && i == 2 {
+			// 	time.Sleep(time.Duration(10) * time.Second)
+			// }
 			err := peer[i].Call("Node.Get_update", &update, &ack)
 			lib.Check_error(err)
 		}
@@ -268,7 +274,7 @@ This RPC method of Node allow to get update from the other node of group multica
 func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	if update.Packet.Source_address != getIpAddress() {
 		mutex_clock.Lock()
-		vector_clock.Update_with_max(update.Timestamp)
+		// vector_clock.Update_with_max(update.Timestamp)
 		// vector_clock.Increment(my_index)
 		mutex_clock.Unlock()
 	}
