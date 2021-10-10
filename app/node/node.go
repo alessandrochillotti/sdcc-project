@@ -25,15 +25,14 @@ import (
 
 type Node int
 
-var channel_connection chan bool
+/* Constant values */
 
-// Constant values
 const MAX_QUEUE = 100
 const MAX_DELAY = 3
 
-/*
-Global variables
-*/
+/* Global variables */
+
+// Process information
 var my_index int
 
 // Algorithm 1 global variables
@@ -57,8 +56,11 @@ var client *redis.Client
 var mutex_queue sync.Mutex
 var mutex_clock sync.Mutex
 
+// Channel
+var channel_connection chan bool
+
 /*
-This function return the ip address of current node
+This function return the ip address of current node.
 */
 func getIpAddress() string {
 	ip_address := "0.0.0.0"
@@ -75,7 +77,7 @@ func getIpAddress() string {
 }
 
 /*
-This function build a struct that contains the info to register the node
+This function build a struct that contains the info to register the node.
 */
 func build_whoami_struct(whoami_to_register *lib.Whoami) {
 	whoami_to_register.Ip_address = getIpAddress()
@@ -83,7 +85,7 @@ func build_whoami_struct(whoami_to_register *lib.Whoami) {
 }
 
 /*
-This function allows to register the node to communicate in multicast group
+This function allows to register the node to communicate in multicast group.
 */
 func register_into_group() {
 	var whoami_to_register lib.Whoami
@@ -106,45 +108,55 @@ func register_into_group() {
 }
 
 /*
-This function log message into file.
+This function log message into file: this has the value of delivery to application layer.
 */
 func log_message(pkt *lib.Packet, id int) {
 	// Open file into volume docker
 	path_file := "/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt"
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	lib.Check_error(err)
-	defer f.Close()
 
 	// Write into file the ip address of registered node
 	_, err = f.WriteString(pkt.Source_address + " -> " + pkt.Message + "[" + strconv.Itoa(id) + "]\n")
 	lib.Check_error(err)
+
+	f.Close()
+}
+
+/*
+Algorithm: 1, 2, 3
+
+This function has the goal to clear the shell and print all messages received and sended by the current peer.
+*/
+func print_chat() {
+	// Clear the screen
+	cmd := exec.Command("clear")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+
+	// Print all messages, received and sended
+	content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+	lib.Check_error(err)
+	list := string(content)
+	print(list)
 }
 
 /*
 Algorithm: 1
 
-This function check if there are packet to deliver.
+This function check if there are packets to deliver, according to current_id + 1 == current_packet.Id.
 */
 func deliver_packet_1() {
 	for {
 		current_packet := <-buffer
-		if current_id+1 == current_packet.Id { // If the packet is the expected packet
+		if current_id+1 == current_packet.Id {
+			// Update expected id of packet
 			current_id = current_id + 1
 
+			// Deliver the packet to application layer
 			log_message(&current_packet.Pkt, current_packet.Id)
 
-			// Clear shell
-			cmd := exec.Command("clear")
-			cmd.Stdout = os.Stdout
-			cmd.Run()
-
-			// Print chat
-			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
-			lib.Check_error(err)
-
-			list := string(content)
-
-			print(list)
+			print_chat()
 		} else {
 			buffer <- current_packet
 		}
@@ -182,23 +194,12 @@ func deliver_packet_2() {
 				// Deliver the packet to application layer
 				log_message(&head_node.Packet, head_node.Timestamp)
 
+				// Remove the node that is just delivered
 				mutex_queue.Lock()
 				queue.Remove_head()
 				mutex_queue.Unlock()
 
-				// Clear shell
-				cmd := exec.Command("clear")
-				cmd.Stdout = os.Stdout
-				cmd.Run()
-
-				// Print chat
-				content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
-				lib.Check_error(err)
-
-				// fmt.Println("Consegnato messaggio con timestamp", head_node.Timestamp)
-				list := string(content)
-
-				print(list)
+				print_chat()
 			}
 		}
 	}
@@ -235,23 +236,16 @@ func deliver_packet_3() {
 		}
 
 		if deliver {
+			// Update the vector clock
 			vector_clock.Update_with_max(node_to_deliver.Update.Timestamp)
+
+			// Deliver the packet to application layer
 			log_message(&node_to_deliver.Update.Packet, node_to_deliver.Update.Packet.Id)
+
+			// Remove the node that is just delivered
 			queue_2.Remove_node(node_to_deliver.Update.Packet.Id)
 
-			// Clear shell
-			cmd := exec.Command("clear")
-			cmd.Stdout = os.Stdout
-			cmd.Run()
-
-			// Print chat
-			content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
-			lib.Check_error(err)
-
-			// fmt.Println("Consegnato messaggio con timestamp", head_node.Timestamp)
-			list := string(content)
-
-			print(list)
+			print_chat()
 		}
 	}
 }
@@ -273,12 +267,12 @@ func increment_id(id *int) {
 				return err
 			}
 
-			// actual opperation (local in optimistic lock)
+			// Increment the value
 			n++
 
-			// runs only if the watched keys remain unchanged
+			// This code runs only if the watched keys remain unchanged
 			_, err = tx.Pipelined(func(pipe redis.Pipeliner) error {
-				// pipe handles the error case
+				// Pipe handles the error case
 				pipe.Set(key, n, 0)
 				*id = n
 				return nil
@@ -291,9 +285,8 @@ func increment_id(id *int) {
 			if err != redis.TxFailedErr {
 				return err
 			}
-			// optimistic lock lost
 		}
-		return errors.New("increment reached maximum number of retries")
+		return errors.New("Increment reached maximum number of retries")
 	}
 
 	increment("ID")
@@ -425,6 +418,21 @@ func setup_connection() error {
 	return nil
 }
 
+/*
+Algorithm: 2, 3
+
+This function allow to init the connection to communicate with Redis container.
+*/
+func init_redis() error {
+	client = redis.NewClient(&redis.Options{
+		Addr:     "10.5.0.250:6379",
+		Password: "password",
+		DB:       0,
+	})
+
+	return client.Set("ID", 0, 0).Err()
+}
+
 /* RPC methods registered by Node */
 
 /*
@@ -467,7 +475,6 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	// Send ack message in multicast
 	for i := 0; i < lib.NUMBER_NODES; i++ {
 		var empty lib.Empty
-		// fmt.Println("Sto inviando l'ack a", addresses[i])
 		peer[i].Go("Node.Get_ack", &update.Packet.Id, &empty, nil)
 	}
 
@@ -475,13 +482,14 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 }
 
 /*
+Algorithm: 3
+
 This RPC method of Node allow to get update from the other node of group multicast
 */
 func (node *Node) Get_update_2(update *utils.Update_2, ack *utils.Ack) error {
 	if update.Packet.Source_address != getIpAddress() {
 		mutex_clock.Lock()
-		// vector_clock.Update_with_max(update.Timestamp)
-		// vector_clock.Increment(my_index)
+		vector_clock.Increment(my_index)
 		mutex_clock.Unlock()
 	}
 
@@ -491,7 +499,6 @@ func (node *Node) Get_update_2(update *utils.Update_2, ack *utils.Ack) error {
 	// Insert update node into queue
 	mutex_queue.Lock()
 	queue_2.Append(update_node)
-	// queue.Display()
 	mutex_queue.Unlock()
 
 	vector_clock.Print()
@@ -505,17 +512,12 @@ Algorithm: 2
 This RPC method of Node allow to receive ack from other nodes of group multicast.
 */
 func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
-	// fmt.Println("Segno l'ack relativo all'id", *id, "che finora ne ha ricevuti", queue.Get_ack_head())
-	// queue.Display()
-
 	acked := false
 	for acked == false {
 		mutex_queue.Lock()
 		acked = queue.Ack_node(*id)
 		mutex_queue.Unlock()
 	}
-
-	// fmt.Println("Ho segnato l'ack relativo all'id", *id, ". Ora ne ha", queue.Get_ack_head())
 
 	return nil
 }
@@ -532,25 +534,11 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, empty *lib.Empty) error
 	return nil
 }
 
-/*
-Algorithm: 2, 3
-
-This function allow to init the connection to communicate with Redis container.
-*/
-func init_redis() error {
-	client = redis.NewClient(&redis.Options{
-		Addr:     "10.5.0.250:6379",
-		Password: "password",
-		DB:       0,
-	})
-
-	return client.Set("ID", 0, 0).Err()
-}
-
 func main() {
+	// Get value from the arguments line
 	algorithm, _ := strconv.Atoi(os.Args[1])
 
-	// For first thing, the node communicates with the register node to register his info
+	// The node communicates with the register node to register his info
 	register_into_group()
 
 	// Allocate object to use it into program execution

@@ -37,10 +37,6 @@ type Packet_sequencer struct {
 // This struct is use for RPC method when the reply is not important
 type Empty struct{}
 
-// type Addresses struct {
-// 	Addresses [NUMBER_NODES]string
-// }
-
 type List_of_nodes struct {
 	List_str string
 }
