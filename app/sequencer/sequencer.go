@@ -54,7 +54,7 @@ func send_multicast_message(ip_address string, arg *lib.Packet, empty *lib.Empty
 /* This function is called by each generic node to send packet to each node of group multicast */
 func (reg *Sequencer) Send_packet(arg *lib.Packet, empty *lib.Empty) error {
 	// Open file
-	file, err := os.Open("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
+	file, err := os.Open("/docker/register_volume/nodes.txt")
 	if err != nil {
 		log.Fatal(err)
 	}

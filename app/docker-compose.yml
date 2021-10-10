@@ -18,7 +18,7 @@ services:
       - "8000:4321" # This maps port 8000 of my host to port 4321 of container
     volumes:
       # The following volume is mounted in /var/lib/docker/volumes/app_list_volume/_data/nodes.txt
-      - list_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
+      - list_volume:/docker/register_volume/
   node:
     build: 
       context: .
@@ -39,8 +39,8 @@ services:
                #  container, but for the second (third and so on) the port 
                #  8001 is busy
     volumes: 
-      # The following volume is mounted in /var/lib/docker/volumes/app_log_volume/_data/ip_address_log.txt
-      - log_node:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
+      # The following volume is mounted in /var/lib/docker/volumes/app_log_node/_data/ip_address_log.txt
+      - log_node:/docker/node_volume/
     links:
       - register_node
   sequencer_node:
@@ -53,8 +53,8 @@ services:
     ports:
       - "8001:4321" # This maps port 8000 of my host to port 4321 of container
     volumes:
-      # The following volume is mounted in /var/lib/docker/volumes/app_log_volume/_data/nodes.txt
-      - list_volume:/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt
+      # The following volume is mounted in /var/lib/docker/volumes/app_list_volume/_data/nodes.txt
+      - list_volume:/docker/register_volume/
     profiles:
       - sequencer
   redis_node:

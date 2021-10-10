@@ -30,7 +30,7 @@ This function is called by each generic node to:
 */
 func (reg *Register) Register_node(arg *lib.Whoami, empty *lib.Empty) error {
 	// Open file into volume docker
-	f, err := os.OpenFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt",
+	f, err := os.OpenFile("/docker/register_volume/nodes.txt",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println(err)
@@ -59,14 +59,14 @@ func send_list() {
 	var empty lib.Empty
 
 	// Read whole file
-	nodes, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
+	nodes, err := ioutil.ReadFile("/docker/register_volume/nodes.txt")
 	if err != nil {
 		log.Printf("Unable to read file: %v", err)
 	}
 	list_nodes.List_str = string(nodes)
 
 	// Open file
-	file, err := os.Open("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
+	file, err := os.Open("/docker/register_volume/nodes.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func main() {
 	lib.Check_error(err)
 
 	// Create file to maintain ip address and number port of all registered nodes
-	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/nodes.txt")
+	f, err := os.Create("/docker/register_volume/nodes.txt")
 	lib.Check_error(err)
 	f.Close()
 

@@ -112,7 +112,7 @@ This function log message into file: this has the value of delivery to applicati
 */
 func log_message(pkt *lib.Packet, id int) {
 	// Open file into volume docker
-	path_file := "/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt"
+	path_file := "/docker/node_volume/" + getIpAddress() + "_log.txt"
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	lib.Check_error(err)
 
@@ -135,7 +135,7 @@ func print_chat() {
 	cmd.Run()
 
 	// Print all messages, received and sended
-	content, err := ioutil.ReadFile("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+	content, err := ioutil.ReadFile("/docker/node_volume/" + getIpAddress() + "_log.txt")
 	lib.Check_error(err)
 	list := string(content)
 	print(list)
@@ -546,7 +546,7 @@ func main() {
 	channel_connection = make(chan bool)
 
 	// Create file for log of messages
-	f, err := os.Create("/home/alessandro/Dropbox/Università/SDCC/sdcc-project/mnt/" + getIpAddress() + "_log.txt")
+	f, err := os.Create("/docker/node_volume/" + getIpAddress() + "_log.txt")
 	lib.Check_error(err)
 	defer f.Close()
 
