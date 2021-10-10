@@ -1,6 +1,6 @@
 /*
 	This is the sequencer node that allow fully ordered multicast implemented centrally.
-	It has ip address equal to 10.5.0.253 and it is listening in port 4321.
+	It has ip address equal to 10.5.0.253 and it is listening in port 1234.
 */
 
 package main
@@ -87,8 +87,8 @@ func main() {
 		fmt.Println("Format of service is not correct: ", err)
 	}
 
-	// Listen for incoming messages on port 4321
-	lis, err := net.Listen("tcp", ":4321")
+	// Listen for incoming messages on port 1234
+	lis, err := net.Listen("tcp", ":1234")
 	if err != nil {
 		fmt.Println("Listen error: ", err)
 	}

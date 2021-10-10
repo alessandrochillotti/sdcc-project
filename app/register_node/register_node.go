@@ -1,6 +1,6 @@
 /*
 	This is the special node that allow to register each node in the network.
-	It has ip address equal to 10.5.0.254 and it is listening in port 4321.
+	It has ip address equal to 10.5.0.254 and it is listening in port 1234.
 */
 
 package main
@@ -107,8 +107,8 @@ func main() {
 	lib.Check_error(err)
 	f.Close()
 
-	// Listen for incoming messages on port 4321
-	lis, err := net.Listen("tcp", ":4321")
+	// Listen for incoming messages on port 1234
+	lis, err := net.Listen("tcp", ":1234")
 	lib.Check_error(err)
 
 	chan_reg = make(chan bool)

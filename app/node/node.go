@@ -93,8 +93,8 @@ func register_into_group() {
 
 	build_whoami_struct(&whoami_to_register)
 
-	// The RPC server has ip address set to 10.5.0.254 and it is listening in port 4321
-	addr_register_node := "10.5.0.254:4321"
+	// The RPC server has ip address set to 10.5.0.254 and it is listening in port 1234
+	addr_register_node := "10.5.0.254:1234"
 
 	// Try to connect to addr_register_node
 	client, err := rpc.Dial("tcp", addr_register_node)
@@ -308,8 +308,8 @@ func open_standard_input_1() {
 		// Build packet to send
 		pkt := lib.Packet{Source_address: getIpAddress(), Message: text}
 
-		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 4321
-		addr_sequencer_node := "10.5.0.253:4321"
+		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
+		addr_sequencer_node := "10.5.0.253:1234"
 
 		// Try to connect to addr_register_node
 		client, err := rpc.Dial("tcp", addr_sequencer_node)
