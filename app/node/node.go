@@ -156,7 +156,8 @@ func deliver_packet_1() {
 			// Deliver the packet to application layer
 			log_message(&current_packet.Pkt, current_packet.Id)
 
-			print_chat()
+			// print_chat()
+
 		} else {
 			buffer <- current_packet
 		}
@@ -534,6 +535,36 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, empty *lib.Empty) error
 	return nil
 }
 
+func (node *Node) Get_message_from_frontend(text *string, empty_reply *lib.Empty) error {
+	var empty lib.Empty
+
+	// Build packet
+	pkt := lib.Packet{Source_address: getIpAddress(), Message: *text}
+
+	// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
+	addr_sequencer_node := "10.5.0.253:1234"
+
+	// Try to connect to addr_register_node
+	client, err := rpc.Dial("tcp", addr_sequencer_node)
+	lib.Check_error(err)
+
+	defer client.Close()
+
+	err = client.Call("Sequencer.Send_packet", &pkt, &empty)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// TODO: use this function to set flag verbos
+func (node *Node) Handshake(request *lib.Empty, ip_container *string) error {
+	*ip_container = getIpAddress()
+
+	return nil
+}
+
 func main() {
 	// Get value from the arguments line
 	algorithm, _ := strconv.Atoi(os.Args[1])
@@ -594,15 +625,19 @@ func main() {
 	switch algorithm {
 	case 1:
 		go deliver_packet_1()
-		open_standard_input_1()
+		// open_standard_input_1()
 		break
 	case 2:
 		go deliver_packet_2()
-		open_standard_input_2()
+		// open_standard_input_2()
 		break
 	case 3:
 		go deliver_packet_3()
-		open_standard_input_3()
+		// open_standard_input_3()
 		break
+	}
+
+	for {
+
 	}
 }
