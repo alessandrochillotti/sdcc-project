@@ -25,6 +25,7 @@ services:
       dockerfile: node/Dockerfile
       args:
         ALGO: ${ALGO}
+        NUMBER_NODE: ${NUMBER_NODE}
     stdin_open: true 
     networks:
       - my_net
@@ -38,9 +39,10 @@ services:
                #  them to the port 8001 of my host and this is ok for the first
                #  container, but for the second (third and so on) the port 
                #  8001 is busy
+      - "4444"
     volumes: 
       # The following volume is mounted in /var/lib/docker/volumes/app_log_node/_data/ip_address_log.txt
-      - log_node:/docker/node_volume/
+      - ./volumes/log_node/:/docker/node_volume/
     links:
       - register_node
   sequencer_node:
