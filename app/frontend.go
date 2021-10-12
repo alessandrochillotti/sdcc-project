@@ -53,7 +53,33 @@ func get_free_port(index int) string {
 	return strconv.Itoa(int(port))
 }
 
-func handshake(client *rpc.Client, ip_container *string) {
+func get_list_container() string {
+	var port uint16
+	port = 0
+
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		panic(err)
+	}
+
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	cnt := 0
+	for _, container := range containers {
+		if container.Names[0][1:10] == "app_node_" {
+			fmt.Printf("%d. %s\n", cnt+1, container.Names[0][1:])
+			cnt++
+		}
+	}
+
+	return strconv.Itoa(int(port))
+}
+
+func handshake(client *rpc.Client, hand_reply *lib.Hand_reply) {
 	verbose := false
 
 	for i := 0; i < len(os.Args); i++ {
@@ -62,37 +88,44 @@ func handshake(client *rpc.Client, ip_container *string) {
 		}
 	}
 
-	handshake_packet := &lib.Handshake{Verbose: verbose}
+	handshake_packet := &lib.Hand_request{Verbose: verbose}
 
-	err := client.Call("Node.Handshake", &handshake_packet, ip_container)
+	err := client.Call("Node.Handshake", &handshake_packet, hand_reply)
 	check_error(err)
-
 }
 
 func main() {
 	var text string
 	var choice int
 	var empty lib.Empty
-	var ip_container string
+	var hand_reply lib.Hand_reply
 
 	// Print menù
-	fmt.Println("Welcome to App")
-	fmt.Println("Inserisci il numero di container che vuoi utilizzare (1, 2, ..., 3)")
+	fmt.Println("Insert the number of one of following containers:")
+	get_list_container()
 	fmt.Scanf("%d\n", &selected_container)
 
+	// Dial of peer
 	addr_node := "127.0.0.1:" + get_free_port(selected_container)
 	client, err := rpc.Dial("tcp", addr_node)
 	lib.Check_error(err)
 
-	handshake(client, &ip_container)
+	// Handshake with peer
+	handshake(client, &hand_reply)
 
-	path_file := "./volumes/log_node/" + ip_container + "_log.txt"
+	path_file := "./volumes/log_node/" + hand_reply.Ip_address + "_log.txt"
+
+	// Clear the shell
+	cmd := exec.Command("clear")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
 
 	for {
-		fmt.Println("Quale operazione vuoi effettuare:")
-		fmt.Println("1. Invio messaggio")
-		fmt.Println("2. Stampa chat")
-		fmt.Println("3. Uscire")
+		fmt.Println("Welcome", hand_reply.Ip_address)
+		fmt.Println("Insert the operation code:")
+		fmt.Println("1. Send message")
+		fmt.Println("2. Print messaged delivered")
+		fmt.Println("3. Exit")
 
 		fmt.Scanf("%d\n", &choice)
 

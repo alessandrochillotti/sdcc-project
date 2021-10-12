@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strconv"
 	"sync"
 
 	"alessandro.it/app/lib"
@@ -95,6 +96,8 @@ func send_list() {
 }
 
 func main() {
+	nodes, _ := strconv.Atoi(os.Getenv("NODES"))
+
 	reg := new(Register)
 
 	// Register a new RPC server and the struct we created above
@@ -117,7 +120,7 @@ func main() {
 	defer lis.Close()
 
 	// Wait that every nodes is registered
-	for i := 0; i < lib.NUMBER_NODES; i++ {
+	for i := 0; i < nodes; i++ {
 		<-chan_reg
 	}
 

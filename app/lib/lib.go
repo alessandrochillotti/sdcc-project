@@ -7,7 +7,7 @@ import (
 )
 
 /* Constant values */
-const NUMBER_NODES = 3
+// const NUMBER_NODES = 3
 
 type Outcome bool /* If is true, then ok. */
 type List string
@@ -35,8 +35,12 @@ type Packet_sequencer struct {
 }
 
 // This struct is used by frontend and node to estabilsh a specific type of communication
-type Handshake struct {
+type Hand_request struct {
 	Verbose bool
+}
+
+type Hand_reply struct {
+	Ip_address string
 }
 
 // This struct is use for RPC method when the reply is not important
@@ -48,6 +52,11 @@ type List_of_nodes struct {
 
 type Deliver struct {
 	Ok bool
+}
+
+type Configuration struct {
+	Algorithm int
+	Nodes     int
 }
 
 /* Utility */

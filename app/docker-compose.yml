@@ -11,6 +11,8 @@ services:
     build: 
       context: .
       dockerfile: register_node/Dockerfile
+      args:
+        NUMBER_NODE: ${NUMBER_NODE}
     networks:
       my_net:
         ipv4_address: 10.5.0.254

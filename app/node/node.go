@@ -23,16 +23,15 @@ import (
 type Node int
 
 /* Constant values */
-
 const MAX_QUEUE = 100
 const MAX_DELAY = 3
 
 /* Global variables */
 
 // Process information
+var conf *lib.Configuration
 var my_index int
 var verbose_flag bool
-var algorithm int
 
 // Algorithm 1 global variables
 var current_id = 0
@@ -40,7 +39,7 @@ var buffer chan (lib.Packet_sequencer)
 
 // Algorithm 2 global variables
 var scalar_clock int = 0
-var addresses [lib.NUMBER_NODES]string /* Contains ip addresses of each node in multicast group */
+var addresses []string /* Contains ip addresses of each node in multicast group */
 var queue *utils.Queue
 
 // Algorithm 3 global variables
@@ -48,7 +47,7 @@ var vector_clock *utils.Vector_clock
 var queue_2 *utils.Queue_2
 
 // Connection variables
-var peer [lib.NUMBER_NODES]*rpc.Client
+var peer []*rpc.Client
 
 // Mutex variables
 var mutex_queue sync.Mutex
@@ -178,11 +177,11 @@ func deliver_packet_2() {
 		mutex_queue.Lock()
 		head := queue.Get_head()
 		mutex_queue.Unlock()
-		if head != nil && head.Ack == lib.NUMBER_NODES {
+		if head != nil && head.Ack == conf.Nodes {
 			deliver := true
 			head_node := head.Update
 
-			for i := 0; i < lib.NUMBER_NODES; i++ {
+			for i := 0; i < conf.Nodes; i++ {
 				if i != my_index {
 					mutex_queue.Lock()
 					update_max_timestamp := queue.Get_update_max_timestamp(addresses[i])
@@ -227,7 +226,7 @@ func deliver_packet_3() {
 		}
 
 		if deliver && node_to_deliver.Update.Timestamp.Clocks[index_pid_to_deliver] == vector_clock.Clocks[index_pid_to_deliver]+1 {
-			for k := 0; k < lib.NUMBER_NODES && deliver; k++ {
+			for k := 0; k < conf.Nodes && deliver; k++ {
 				if k != index_pid_to_deliver && node_to_deliver.Update.Timestamp.Clocks[k] > vector_clock.Clocks[k] {
 					deliver = false
 				}
@@ -255,7 +254,7 @@ This function, after reception of list from register node, allow to setup connec
 func setup_connection() error {
 	var err error
 
-	for i := 0; i < lib.NUMBER_NODES; i++ {
+	for i := 0; i < conf.Nodes; i++ {
 		addr_node := addresses[i] + ":1234"
 		peer[i], err = rpc.Dial("tcp", addr_node)
 		lib.Check_error(err)
@@ -277,7 +276,7 @@ This RPC method of Node allow to get list from the registered node.
 func (node *Node) Get_list(list *lib.List_of_nodes, reply *lib.Empty) error {
 	// Parse the list and put the addresses into destination array
 	addr_tmp := strings.Split(list.List_str, "\n")
-	for i := 0; i < lib.NUMBER_NODES; i++ {
+	for i := 0; i < conf.Nodes; i++ {
 		addresses[i] = addr_tmp[i]
 	}
 
@@ -309,7 +308,7 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	// Send ack message in multicast
 	ack_to_send := &utils.Ack{Ip_addr: update.Packet.Source_address, Timestamp: update.Timestamp}
 
-	for i := 0; i < lib.NUMBER_NODES; i++ {
+	for i := 0; i < conf.Nodes; i++ {
 		var empty lib.Empty
 		peer[i].Go("Node.Get_ack", &ack_to_send, &empty, nil)
 	}
@@ -377,7 +376,7 @@ func (node *Node) Get_message_from_frontend(text *string, empty_reply *lib.Empty
 	// Build packet
 	pkt := lib.Packet{Source_address: getIpAddress(), Message: *text, Index_pid: my_index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
-	switch algorithm {
+	switch conf.Algorithm {
 	case 1:
 		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
 		addr_sequencer_node := "10.5.0.253:1234"
@@ -402,7 +401,7 @@ func (node *Node) Get_message_from_frontend(text *string, empty_reply *lib.Empty
 		mutex_clock.Unlock()
 
 		// Send to each node of group multicast the message
-		for i := 0; i < lib.NUMBER_NODES; i++ {
+		for i := 0; i < conf.Nodes; i++ {
 			lib.Delay(3)
 			err := peer[i].Call("Node.Get_update", &update, &ack)
 			lib.Check_error(err)
@@ -419,7 +418,7 @@ func (node *Node) Get_message_from_frontend(text *string, empty_reply *lib.Empty
 		first := true
 
 		// Send to each node of group multicast the message
-		for i := 0; i < lib.NUMBER_NODES; i++ {
+		for i := 0; i < conf.Nodes; i++ {
 			// lib.Delay(3)
 			/*
 				The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
@@ -438,17 +437,27 @@ func (node *Node) Get_message_from_frontend(text *string, empty_reply *lib.Empty
 	return nil
 }
 
-func (node *Node) Handshake(request *lib.Handshake, ip_container *string) error {
+func (node *Node) Handshake(request *lib.Hand_request, reply *lib.Hand_reply) error {
 	verbose_flag = request.Verbose
 
-	*ip_container = getIpAddress()
+	reply.Ip_address = getIpAddress()
 
 	return nil
 }
 
+func init_configuration() {
+	algo, _ := strconv.Atoi(os.Getenv("ALGORITHM"))
+	nodes, _ := strconv.Atoi(os.Getenv("NODES"))
+
+	conf = &lib.Configuration{Algorithm: algo, Nodes: nodes}
+
+	addresses = make([]string, conf.Nodes)
+	peer = make([]*rpc.Client, nodes)
+}
+
 func main() {
-	// Get value from the arguments line
-	algorithm, _ = strconv.Atoi(os.Getenv("ALGORITHM"))
+	// Init phase
+	init_configuration()
 
 	// The node communicates with the register node to register his info
 	register_into_group()
@@ -473,7 +482,7 @@ func main() {
 	defer lis.Close()
 
 	// Setup counter
-	switch algorithm {
+	switch conf.Algorithm {
 	case 1:
 		buffer = make(chan lib.Packet_sequencer, MAX_QUEUE)
 		current_id = 0
@@ -485,7 +494,7 @@ func main() {
 	case 3:
 		queue_2 = &utils.Queue_2{}
 		vector_clock = new(utils.Vector_clock)
-		vector_clock.Init()
+		vector_clock.Init(conf.Nodes)
 		break
 	}
 
@@ -498,7 +507,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	switch algorithm {
+	switch conf.Algorithm {
 	case 1:
 		go deliver_packet_1()
 		break
