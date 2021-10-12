@@ -6,8 +6,6 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"io/ioutil"
 	"net"
 	"net/rpc"
@@ -20,7 +18,6 @@ import (
 
 	"alessandro.it/app/lib"
 	"alessandro.it/app/utils"
-	"github.com/go-redis/redis"
 )
 
 type Node int
@@ -35,6 +32,7 @@ const MAX_DELAY = 3
 // Process information
 var my_index int
 var verbose_flag bool
+var algorithm int
 
 // Algorithm 1 global variables
 var current_id = 0
@@ -51,7 +49,6 @@ var queue_2 *utils.Queue_2
 
 // Connection variables
 var peer [lib.NUMBER_NODES]*rpc.Client
-var client *redis.Client
 
 // Mutex variables
 var mutex_queue sync.Mutex
@@ -111,17 +108,17 @@ func register_into_group() {
 /*
 This function log message into file: this has the value of delivery to application layer.
 */
-func log_message(pkt *lib.Packet, id int) {
+func log_message(pkt *lib.Packet) {
 	// Open file into volume docker
 	path_file := "/docker/node_volume/" + getIpAddress() + "_log.txt"
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	lib.Check_error(err)
 
 	if verbose_flag {
-		_, err = f.WriteString(pkt.Timestamp.Format(time.RFC3339) + " " + pkt.Source_address + " -> " + pkt.Message + "[" + strconv.Itoa(id) + "]\n")
+		_, err = f.WriteString(pkt.Timestamp.Format(time.RFC1123)[17:25] + " " + pkt.Source_address + " -> " + pkt.Message + "\n")
 		lib.Check_error(err)
 	} else {
-		_, err = f.WriteString(pkt.Source_address + " -> " + pkt.Message + "[" + strconv.Itoa(id) + "]\n")
+		_, err = f.WriteString(pkt.Source_address + " -> " + pkt.Message + "\n")
 		lib.Check_error(err)
 	}
 
@@ -159,7 +156,7 @@ func deliver_packet_1() {
 			current_id = current_id + 1
 
 			// Deliver the packet to application layer
-			log_message(&current_packet.Pkt, current_packet.Id)
+			log_message(&current_packet.Pkt)
 
 			// print_chat()
 
@@ -185,8 +182,6 @@ func deliver_packet_2() {
 			deliver := true
 			head_node := head.Update
 
-			// 	fmt.Println("Sto cercando di consegnare il pacchetto con id", head_node.Packet.Id, "e timestamp", head_node.Timestamp)
-
 			for i := 0; i < lib.NUMBER_NODES; i++ {
 				if i != my_index {
 					mutex_queue.Lock()
@@ -198,14 +193,12 @@ func deliver_packet_2() {
 
 			if deliver {
 				// Deliver the packet to application layer
-				log_message(&head_node.Packet, head_node.Timestamp)
+				log_message(&head_node.Packet)
 
 				// Remove the node that is just delivered
 				mutex_queue.Lock()
 				queue.Remove_head()
 				mutex_queue.Unlock()
-
-				print_chat()
 			}
 		}
 	}
@@ -246,161 +239,10 @@ func deliver_packet_3() {
 			vector_clock.Update_with_max(node_to_deliver.Update.Timestamp)
 
 			// Deliver the packet to application layer
-			log_message(&node_to_deliver.Update.Packet, node_to_deliver.Update.Packet.Id)
+			log_message(&node_to_deliver.Update.Packet)
 
 			// Remove the node that is just delivered
-			queue_2.Remove_node(node_to_deliver.Update.Packet.Id)
-
-			print_chat()
-		}
-	}
-}
-
-/*
-Algorithm: 2, 3
-
-This function allow to increment ID packet into Redis container in transactional mode.
-*/
-func increment_id(id *int) {
-	const routineCount = 100
-
-	// Transactionally increments key using GET and SET commands.
-	increment := func(key string) error {
-		txf := func(tx *redis.Tx) error {
-			// get current value or zero
-			n, err := tx.Get("ID").Int()
-			if err != nil && err != redis.Nil {
-				return err
-			}
-
-			// Increment the value
-			n++
-
-			// This code runs only if the watched keys remain unchanged
-			_, err = tx.Pipelined(func(pipe redis.Pipeliner) error {
-				// Pipe handles the error case
-				pipe.Set(key, n, 0)
-				*id = n
-				return nil
-			})
-			return err
-		}
-
-		for retries := routineCount; retries > 0; retries-- {
-			err := client.Watch(txf, key)
-			if err != redis.TxFailedErr {
-				return err
-			}
-		}
-		return errors.New("Increment reached maximum number of retries")
-	}
-
-	increment("ID")
-}
-
-/*
-Algorithm: 1
-
-This function allow to wait the input of user to send the message to each node of group multicast
-*/
-func open_standard_input_1() {
-	var empty lib.Empty
-	for {
-		// Take in input the content of message to send
-		in := bufio.NewReader(os.Stdin)
-		text, err := in.ReadString('\n')
-		text = strings.TrimSpace(text)
-
-		// Build packet to send
-		t, _ := time.Parse("1/2/2006 15:04:05", "12/8/2015 12:00:00")
-		pkt := lib.Packet{Source_address: getIpAddress(), Message: text, Timestamp: t}
-
-		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
-		addr_sequencer_node := "10.5.0.253:1234"
-
-		// Try to connect to addr_register_node
-		client, err := rpc.Dial("tcp", addr_sequencer_node)
-		lib.Check_error(err)
-
-		defer client.Close()
-
-		lib.Delay(MAX_DELAY)
-
-		err = client.Call("Sequencer.Send_packet", &pkt, &empty)
-		lib.Check_error(err)
-	}
-}
-
-/*
-Algorithm: 2
-
-This function allow to wait the input of user to send the message to each node of group multicast
-*/
-func open_standard_input_2() {
-	var pkt_id int
-	var ack utils.Ack = 0
-	for {
-		// Take in input the content of message to send
-		in := bufio.NewReader(os.Stdin)
-		text, _ := in.ReadString('\n')
-		text = strings.TrimSpace(text)
-
-		// Increment ID in transactional mode to Redis container
-		increment_id(&pkt_id)
-		// Build packet
-		pkt := lib.Packet{Id: pkt_id, Source_address: getIpAddress(), Index_pid: my_index, Message: text}
-
-		// Update the scalar clock and build update packet to send
-		mutex_clock.Lock()
-		scalar_clock = scalar_clock + 1
-		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
-		mutex_clock.Unlock()
-
-		// Send to each node of group multicast the message
-		for i := 0; i < lib.NUMBER_NODES; i++ {
-			lib.Delay(3)
-			err := peer[i].Call("Node.Get_update", &update, &ack)
-			lib.Check_error(err)
-		}
-	}
-}
-
-/*
-Algorithm: 3
-
-This function allow to wait the input of user to send the message to each node of group multicast
-*/
-func open_standard_input_3() {
-	var pkt_id int
-	var ack utils.Ack = 0
-	for {
-		// Take in input the content of message to send
-		in := bufio.NewReader(os.Stdin)
-		text, _ := in.ReadString('\n')
-		text = strings.TrimSpace(text)
-
-		// Increment ID in transactional mode to Redis container
-		increment_id(&pkt_id)
-		// Build packet
-		pkt := lib.Packet{Id: pkt_id, Source_address: getIpAddress(), Index_pid: my_index, Message: text}
-
-		// Update the scalar clock and build update packet to send
-		mutex_clock.Lock()
-		vector_clock.Increment(my_index)
-		update := utils.Update_2{Timestamp: *vector_clock, Packet: pkt}
-		mutex_clock.Unlock()
-
-		// Send to each node of group multicast the message
-		for i := 0; i < lib.NUMBER_NODES; i++ {
-			// lib.Delay(3)
-			/*
-				The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
-			*/
-			if pkt_id == 1 && i == 2 {
-				time.Sleep(time.Duration(10) * time.Second)
-			}
-			err := peer[i].Call("Node.Get_update_2", &update, &ack)
-			lib.Check_error(err)
+			queue_2.Remove_node(node_to_deliver)
 		}
 	}
 }
@@ -423,21 +265,6 @@ func setup_connection() error {
 	}
 
 	return nil
-}
-
-/*
-Algorithm: 2, 3
-
-This function allow to init the connection to communicate with Redis container.
-*/
-func init_redis() error {
-	client = redis.NewClient(&redis.Options{
-		Addr:     "10.5.0.250:6379",
-		Password: "password",
-		DB:       0,
-	})
-
-	return client.Set("ID", 0, 0).Err()
 }
 
 /* RPC methods registered by Node */
@@ -480,9 +307,11 @@ func (node *Node) Get_update(update *utils.Update, ack *utils.Ack) error {
 	mutex_queue.Unlock()
 
 	// Send ack message in multicast
+	ack_to_send := &utils.Ack{Ip_addr: update.Packet.Source_address, Timestamp: update.Timestamp}
+
 	for i := 0; i < lib.NUMBER_NODES; i++ {
 		var empty lib.Empty
-		peer[i].Go("Node.Get_ack", &update.Packet.Id, &empty, nil)
+		peer[i].Go("Node.Get_ack", &ack_to_send, &empty, nil)
 	}
 
 	return nil
@@ -518,11 +347,11 @@ Algorithm: 2
 
 This RPC method of Node allow to receive ack from other nodes of group multicast.
 */
-func (node *Node) Get_ack(id *int, empty *lib.Empty) error {
+func (node *Node) Get_ack(ack *utils.Ack, empty *lib.Empty) error {
 	acked := false
 	for acked == false {
 		mutex_queue.Lock()
-		acked = queue.Ack_node(*id)
+		acked = queue.Ack_node(*ack)
 		mutex_queue.Unlock()
 	}
 
@@ -543,28 +372,72 @@ func (node *Node) Get_Message(pkt *lib.Packet_sequencer, empty *lib.Empty) error
 
 func (node *Node) Get_message_from_frontend(text *string, empty_reply *lib.Empty) error {
 	var empty lib.Empty
+	var ack utils.Ack
 
 	// Build packet
-	pkt := lib.Packet{Source_address: getIpAddress(), Message: *text}
+	pkt := lib.Packet{Source_address: getIpAddress(), Message: *text, Index_pid: my_index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
-	// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
-	addr_sequencer_node := "10.5.0.253:1234"
+	switch algorithm {
+	case 1:
+		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
+		addr_sequencer_node := "10.5.0.253:1234"
 
-	// Try to connect to addr_register_node
-	client, err := rpc.Dial("tcp", addr_sequencer_node)
-	lib.Check_error(err)
+		// Try to connect to addr_register_node
+		client, err := rpc.Dial("tcp", addr_sequencer_node)
+		lib.Check_error(err)
 
-	defer client.Close()
+		// Send packet to sequencer node
+		err = client.Call("Sequencer.Send_packet", &pkt, &empty)
+		lib.Check_error(err)
 
-	err = client.Call("Sequencer.Send_packet", &pkt, &empty)
-	if err != nil {
-		return err
+		// Close connection with him
+		client.Close()
+
+		break
+	case 2:
+		// Update the scalar clock and build update packet to send
+		mutex_clock.Lock()
+		scalar_clock = scalar_clock + 1
+		update := utils.Update{Timestamp: scalar_clock, Packet: pkt}
+		mutex_clock.Unlock()
+
+		// Send to each node of group multicast the message
+		for i := 0; i < lib.NUMBER_NODES; i++ {
+			lib.Delay(3)
+			err := peer[i].Call("Node.Get_update", &update, &ack)
+			lib.Check_error(err)
+		}
+
+		break
+	case 3:
+		// Update the scalar clock and build update packet to send
+		mutex_clock.Lock()
+		vector_clock.Increment(my_index)
+		update := utils.Update_2{Timestamp: *vector_clock, Packet: pkt}
+		mutex_clock.Unlock()
+
+		first := true
+
+		// Send to each node of group multicast the message
+		for i := 0; i < lib.NUMBER_NODES; i++ {
+			// lib.Delay(3)
+			/*
+				The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
+			*/
+			if first && i == 2 {
+				time.Sleep(time.Duration(10) * time.Second)
+				first = false
+			}
+			err := peer[i].Call("Node.Get_update_2", &update, &ack)
+			lib.Check_error(err)
+		}
+
+		break
 	}
 
 	return nil
 }
 
-// TODO: use this function to set flag verbos
 func (node *Node) Handshake(request *lib.Handshake, ip_container *string) error {
 	verbose_flag = request.Verbose
 
@@ -575,7 +448,7 @@ func (node *Node) Handshake(request *lib.Handshake, ip_container *string) error 
 
 func main() {
 	// Get value from the arguments line
-	algorithm, _ := strconv.Atoi(os.Args[1])
+	algorithm, _ = strconv.Atoi(os.Getenv("ALGORITHM"))
 
 	// The node communicates with the register node to register his info
 	register_into_group()
@@ -598,11 +471,6 @@ func main() {
 	lis, err := net.Listen("tcp", ":1234")
 	lib.Check_error(err)
 	defer lis.Close()
-
-	// Setup Redis connection
-	if algorithm != 1 {
-		init_redis()
-	}
 
 	// Setup counter
 	switch algorithm {
@@ -633,15 +501,12 @@ func main() {
 	switch algorithm {
 	case 1:
 		go deliver_packet_1()
-		// open_standard_input_1()
 		break
 	case 2:
 		go deliver_packet_2()
-		// open_standard_input_2()
 		break
 	case 3:
 		go deliver_packet_3()
-		// open_standard_input_3()
 		break
 	}
 

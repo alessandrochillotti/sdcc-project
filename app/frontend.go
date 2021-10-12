@@ -78,7 +78,7 @@ func main() {
 	// Print menù
 	fmt.Println("Welcome to App")
 	fmt.Println("Inserisci il numero di container che vuoi utilizzare (1, 2, ..., 3)")
-	fmt.Scanf("%d", &selected_container)
+	fmt.Scanf("%d\n", &selected_container)
 
 	addr_node := "127.0.0.1:" + get_free_port(selected_container)
 	client, err := rpc.Dial("tcp", addr_node)
@@ -94,7 +94,7 @@ func main() {
 		fmt.Println("2. Stampa chat")
 		fmt.Println("3. Uscire")
 
-		fmt.Scanf("%d", &choice)
+		fmt.Scanf("%d\n", &choice)
 
 		switch choice {
 		case 1:
@@ -102,16 +102,13 @@ func main() {
 			text, err = in.ReadString('\n')
 			text = strings.TrimSpace(text)
 
-			err = client.Call("Node.Get_message_from_frontend", &text, &empty)
-			check_error(err)
+			client.Go("Node.Get_message_from_frontend", &text, &empty, nil)
 
 			// Clear the shell
 			cmd := exec.Command("clear")
 			cmd.Stdout = os.Stdout
 			cmd.Run()
 
-			fmt.Println("Messaggio inviato correttamente.")
-			fmt.Println()
 			break
 		case 2:
 			// Clear the shell

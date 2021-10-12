@@ -23,7 +23,10 @@ type Update_2 struct {
 	Packet    lib.Packet
 }
 
-type Ack int
+type Ack struct {
+	Ip_addr   string
+	Timestamp int
+}
 
 /*
 Definition of struct used for linked list to mantain the queue of packet sorted by timestamp
@@ -31,13 +34,13 @@ Definition of struct used for linked list to mantain the queue of packet sorted 
 type Node struct {
 	Update Update
 	Next   *Node
-	Ack    Ack
+	Ack    int
 }
 
 type Node_2 struct {
 	Update Update_2
 	Next   *Node_2
-	Ack    Ack
+	Ack    int
 }
 
 type Queue struct {
@@ -84,25 +87,24 @@ func (l *Queue) Update_into_queue(update *Node) {
 }
 
 // Put ack for a specific timestamp
-func (l *Queue) Ack_node(id int) bool {
+func (l *Queue) Ack_node(ack_received Ack) bool {
 	acked := false
 	current_node := l.head
 
-	for current_node != nil && current_node.Update.Packet.Id != id {
+	for current_node != nil && (current_node.Update.Packet.Source_address != ack_received.Ip_addr || current_node.Update.Timestamp != ack_received.Timestamp) {
 		current_node = current_node.Next
 	}
 
 	if current_node != nil {
 		current_node.Ack = current_node.Ack + 1
 		acked = true
-		// fmt.Println("Ora il numero di ack per il l'id", id, "è", current_node.Ack)
 	}
 
 	return acked
 }
 
 // Get number ack of head
-func (l *Queue) Get_ack_head() Ack {
+func (l *Queue) Get_ack_head() int {
 	if l.head != nil {
 		return l.head.Ack
 	}
@@ -140,12 +142,12 @@ func (l *Queue) Remove_head() {
 }
 
 // Remove head
-func (l *Queue_2) Remove_node(id int) bool {
+func (l *Queue_2) Remove_node(node_target *Node_2) bool {
 	current_node := l.head
 	previous_node := current_node
 
 	for current_node != nil {
-		if current_node.Update.Packet.Id == id {
+		if current_node == node_target {
 			if current_node == l.head {
 				l.head = l.head.Next
 			} else {
@@ -166,8 +168,7 @@ func (l *Queue) Display() {
 	current_node := l.head
 	fmt.Println("[timestamp, pid, id]")
 	for current_node != nil {
-		// fmt.Printf("%v -> ", current_node.Update.Packet.Id)
-		fmt.Printf("[%v, %d, %d] -> ", current_node.Update.Timestamp, current_node.Update.Packet.Index_pid, current_node.Update.Packet.Id)
+		fmt.Printf("[%v, %d] -> ", current_node.Update.Timestamp, current_node.Update.Packet.Index_pid)
 		current_node = current_node.Next
 	}
 	fmt.Printf("\n")
@@ -188,15 +189,19 @@ func (l *Queue) Get_update_max_timestamp(ip_addr string) Update {
 }
 
 // This function return the head of queue
-func (l *Queue_2) Get_node(id int) *Node_2 {
+func (l *Queue_2) Get_node(counter int) *Node_2 {
 	current_node := l.head
-
-	for current_node != nil {
-		if current_node.Update.Packet.Id == id {
-			return current_node
-		}
-		current_node = current_node.Next
+	if current_node == nil {
+		return current_node
 	}
 
-	return nil
+	for i := 0; i < counter; i++ {
+		if current_node.Next == nil {
+			current_node = l.head
+		} else {
+			current_node = current_node.Next
+		}
+	}
+
+	return current_node
 }
