@@ -7,14 +7,11 @@ ENV NODES ${NUMBER_NODE}
 
 WORKDIR /app
 
-COPY ./node/ ./node/
-COPY ./lib/ ./lib/
+COPY ./peer/ ./peer/
 COPY ./utils/ ./utils/
 
 RUN go mod init alessandro.it/app \
     && go mod tidy \
-    && go mod download \
-    && go build lib/lib.go \
-    && go build -o main_node node/node.go
+    && go mod download 
 
-CMD [ "sh", "-c", "./main_node ${ALGORITHM}" ]
+CMD [ "sh", "-c", "go run peer/*.go" ]

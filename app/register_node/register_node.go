@@ -15,10 +15,10 @@ import (
 	"strconv"
 	"sync"
 
-	"alessandro.it/app/lib"
+	"alessandro.it/app/utils"
 )
 
-type Register int
+type Register struct{}
 
 var f *os.FileMode
 var mutex_write sync.Mutex
@@ -29,7 +29,7 @@ This function is called by each generic node to:
 	1. Register its ip address into group multicast
 	2. When the number of node is equal to NUMBER_NODES, the register_node send the list of nodes
 */
-func (reg *Register) Register_node(arg *lib.Whoami, empty *lib.Empty) error {
+func (reg *Register) Register_node(arg *utils.Whoami, empty *utils.Empty) error {
 	// Open file into volume docker
 	f, err := os.OpenFile("/docker/register_volume/nodes.txt",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -56,8 +56,8 @@ func (reg *Register) Register_node(arg *lib.Whoami, empty *lib.Empty) error {
 This function allow to send to each node of group multicast the list of nodes registered.
 */
 func send_list() {
-	var list_nodes lib.List_of_nodes
-	var empty lib.Empty
+	var list_nodes utils.List_of_nodes
+	var empty utils.Empty
 
 	// Read whole file
 	nodes, err := ioutil.ReadFile("/docker/register_volume/nodes.txt")
@@ -85,9 +85,9 @@ func send_list() {
 		}
 
 		// Call remote procedure and reply will store the RPC result
-		err = client.Call("Node.Get_list", &list_nodes, &empty)
+		err = client.Call("General.Get_list", &list_nodes, &empty)
 		if err != nil {
-			log.Fatal("Error in Node.Get_list: ", err)
+			log.Fatal("Error in General.Get_list: ", err)
 		}
 
 		client.Close()
@@ -103,16 +103,16 @@ func main() {
 	// Register a new RPC server and the struct we created above
 	server := rpc.NewServer()
 	err := server.RegisterName("Register", reg)
-	lib.Check_error(err)
+	utils.Check_error(err)
 
 	// Create file to maintain ip address and number port of all registered nodes
 	f, err := os.Create("/docker/register_volume/nodes.txt")
-	lib.Check_error(err)
+	utils.Check_error(err)
 	f.Close()
 
 	// Listen for incoming messages on port 1234
 	lis, err := net.Listen("tcp", ":1234")
-	lib.Check_error(err)
+	utils.Check_error(err)
 
 	chan_reg = make(chan bool)
 	go server.Accept(lis)

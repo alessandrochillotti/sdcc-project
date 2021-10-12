@@ -1,9 +1,10 @@
+/*
+This file define the vector clock and the utils useful to implement the algorithm 3.
+*/
 package utils
 
 import (
 	"fmt"
-
-	"alessandro.it/app/lib"
 )
 
 type Vector_clock struct {
@@ -23,7 +24,7 @@ func (v *Vector_clock) Increment(index int) {
 
 func (v *Vector_clock) Update_with_max(v2 Vector_clock) {
 	for i := 0; i < len(v.Clocks); i++ {
-		v.Clocks[i] = lib.Max(v.Clocks[i], v2.Clocks[i])
+		v.Clocks[i] = Max(v.Clocks[i], v2.Clocks[i])
 	}
 }
 
@@ -35,56 +36,3 @@ func (v *Vector_clock) Print() {
 	}
 	fmt.Printf("%d ]\n", v.Clocks[i])
 }
-
-/*
-This function return:
-	- True, if the vector v1 has, in each position, value less or equal than v2.
-	- False, otherwise.
-*/
-// func Less_equal(v1 Vector_clock, v2 Vector_clock) bool {
-// 	for i := 0; i < len(v.Clocks); i++ {
-// 		if v1.Clocks[i] > v2.Clocks[i] {
-// 			return false
-// 		}
-// 	}
-
-// 	return true
-// }
-
-/*
-This function return:
-	- True, if the vectors have the same value for each position.
-	- False, otherwise.
-*/
-// func Equal(v1 Vector_clock, v2 Vector_clock) bool {
-// 	for i := 0; i < len(v.Clocks); i++ {
-// 		if v1.Clocks[i] != v2.Clocks[i] {
-// 			return false
-// 		}
-// 	}
-
-// 	return true
-// }
-
-/*
-This function return:
-	- True, if the vector v1 is less than vector v2
-	- False, otherwise.
-*/
-// func Less(v1 Vector_clock, v2 Vector_clock) bool {
-// 	less_value_exist := false
-
-// 	for i := 0; i < len(v.Clocks); i++ {
-// 		if v1.Clocks[i] > v2.Clocks[i] {
-// 			return false
-// 		} else if v1.Clocks[i] < v2.Clocks[i] {
-// 			less_value_exist = true
-// 		}
-// 	}
-
-// 	if less_value_exist {
-// 		return true
-// 	} else {
-// 		return false
-// 	}
-// }

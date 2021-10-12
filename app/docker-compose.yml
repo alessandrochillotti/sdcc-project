@@ -18,13 +18,14 @@ services:
         ipv4_address: 10.5.0.254
     ports:
       - "8000:1234" # This maps port 8000 of my host to port 1234 of container
+      - "4321"
     volumes:
       # The following volume is mounted in /var/lib/docker/volumes/app_list_volume/_data/nodes.txt
       - list_volume:/docker/register_volume/
-  node:
+  peer:
     build: 
       context: .
-      dockerfile: node/Dockerfile
+      dockerfile: peer/Dockerfile
       args:
         ALGO: ${ALGO}
         NUMBER_NODE: ${NUMBER_NODE}
@@ -35,15 +36,13 @@ services:
       # - "8001:1234"
       - "1234" #  This will expose the port 1234 of the container to an ephemeral 
                #  unallocated port on the host machine. It is not equal to line
-               #  24 because when use the following command
+               #  37 because when use the following command
                #                docker-compose up --scale node=X
                #  when it tries to create X containers it maps port of each of
                #  them to the port 8001 of my host and this is ok for the first
                #  container, but for the second (third and so on) the port 
                #  8001 is busy
-      - "4444"
-    volumes: 
-      # The following volume is mounted in /var/lib/docker/volumes/app_log_node/_data/ip_address_log.txt
+    volumes:  
       - ./volumes/log_node/:/docker/node_volume/
     links:
       - register_node
@@ -57,18 +56,9 @@ services:
     ports:
       - "8001:1234" # This maps port 8000 of my host to port 1234 of container
     volumes:
-      # The following volume is mounted in /var/lib/docker/volumes/app_list_volume/_data/nodes.txt
       - list_volume:/docker/register_volume/
     profiles:
       - sequencer
-  redis_list:
-    image: "redis:alpine"
-    command: redis-server --requirepass password
-    ports:
-     - "6380:6379"
-    networks:
-      my_net:
-        ipv4_address: 10.5.0.251
       
 volumes:
   list_volume:

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"alessandro.it/app/lib"
+	"alessandro.it/app/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
@@ -79,7 +79,7 @@ func get_list_container() string {
 	return strconv.Itoa(int(port))
 }
 
-func handshake(client *rpc.Client, hand_reply *lib.Hand_reply) {
+func handshake(client *rpc.Client, hand_reply *utils.Hand_reply) {
 	verbose := false
 
 	for i := 0; i < len(os.Args); i++ {
@@ -88,17 +88,19 @@ func handshake(client *rpc.Client, hand_reply *lib.Hand_reply) {
 		}
 	}
 
-	handshake_packet := &lib.Hand_request{Verbose: verbose}
+	handshake_packet := &utils.Hand_request{Verbose: verbose}
 
-	err := client.Call("Node.Handshake", &handshake_packet, hand_reply)
+	fmt.Println("Stringo la mano")
+
+	err := client.Call("General.Handshake", &handshake_packet, hand_reply)
 	check_error(err)
 }
 
 func main() {
 	var text string
 	var choice int
-	var empty lib.Empty
-	var hand_reply lib.Hand_reply
+	var empty utils.Empty
+	var hand_reply utils.Hand_reply
 
 	// Print menù
 	fmt.Println("Insert the number of one of following containers:")
@@ -108,7 +110,7 @@ func main() {
 	// Dial of peer
 	addr_node := "127.0.0.1:" + get_free_port(selected_container)
 	client, err := rpc.Dial("tcp", addr_node)
-	lib.Check_error(err)
+	utils.Check_error(err)
 
 	// Handshake with peer
 	handshake(client, &hand_reply)
@@ -135,7 +137,8 @@ func main() {
 			text, err = in.ReadString('\n')
 			text = strings.TrimSpace(text)
 
-			client.Go("Node.Get_message_from_frontend", &text, &empty, nil)
+			fmt.Println("Vado de RPC")
+			client.Go("Peer.Get_message_from_frontend", &text, &empty, nil)
 
 			// Clear the shell
 			cmd := exec.Command("clear")
