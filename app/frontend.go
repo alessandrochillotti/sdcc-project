@@ -46,7 +46,6 @@ func get_free_port(index int) string {
 		for i := 0; cnt == index && i < len(container.Ports) && port == 0; i++ {
 			if container.Ports[i].PrivatePort == 1234 {
 				port = container.Ports[i].PublicPort
-				fmt.Println(port)
 			}
 		}
 	}
@@ -54,28 +53,20 @@ func get_free_port(index int) string {
 	return strconv.Itoa(int(port))
 }
 
-func get_list_containers() {
-	cnt := 0
+func handshake(client *rpc.Client, ip_container *string) {
+	verbose := false
 
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		panic(err)
-	}
-
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
-	if err != nil {
-		panic(err)
-	}
-
-	// TODO: control if container is already selected
-	for _, container := range containers {
-		fmt.Println(container.Names[0])
-		if container.Names[0] == "app_node_1" {
-			cnt++
-			fmt.Printf("%d. %s\n", cnt, (container.Names[0])[1:])
+	for i := 0; i < len(os.Args); i++ {
+		if os.Args[i] == "-V" {
+			verbose = true
 		}
 	}
+
+	handshake_packet := &lib.Handshake{Verbose: verbose}
+
+	err := client.Call("Node.Handshake", &handshake_packet, ip_container)
+	check_error(err)
+
 }
 
 func main() {
@@ -93,8 +84,7 @@ func main() {
 	client, err := rpc.Dial("tcp", addr_node)
 	lib.Check_error(err)
 
-	client.Call("Node.Handshake", &empty, &ip_container)
-	check_error(err)
+	handshake(client, &ip_container)
 
 	path_file := "./volumes/log_node/" + ip_container + "_log.txt"
 
@@ -134,7 +124,6 @@ func main() {
 
 			break
 		case 3:
-			fmt.Println("Arrivederci")
 			return
 		default:
 			fmt.Println("Codice operativo non supportato.")

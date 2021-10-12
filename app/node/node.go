@@ -34,6 +34,7 @@ const MAX_DELAY = 3
 
 // Process information
 var my_index int
+var verbose_flag bool
 
 // Algorithm 1 global variables
 var current_id = 0
@@ -116,9 +117,13 @@ func log_message(pkt *lib.Packet, id int) {
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	lib.Check_error(err)
 
-	// Write into file the ip address of registered node
-	_, err = f.WriteString(pkt.Source_address + " -> " + pkt.Message + "[" + strconv.Itoa(id) + "]\n")
-	lib.Check_error(err)
+	if verbose_flag {
+		_, err = f.WriteString(pkt.Timestamp.Format(time.RFC3339) + " " + pkt.Source_address + " -> " + pkt.Message + "[" + strconv.Itoa(id) + "]\n")
+		lib.Check_error(err)
+	} else {
+		_, err = f.WriteString(pkt.Source_address + " -> " + pkt.Message + "[" + strconv.Itoa(id) + "]\n")
+		lib.Check_error(err)
+	}
 
 	f.Close()
 }
@@ -307,7 +312,8 @@ func open_standard_input_1() {
 		text = strings.TrimSpace(text)
 
 		// Build packet to send
-		pkt := lib.Packet{Source_address: getIpAddress(), Message: text}
+		t, _ := time.Parse("1/2/2006 15:04:05", "12/8/2015 12:00:00")
+		pkt := lib.Packet{Source_address: getIpAddress(), Message: text, Timestamp: t}
 
 		// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
 		addr_sequencer_node := "10.5.0.253:1234"
@@ -559,7 +565,9 @@ func (node *Node) Get_message_from_frontend(text *string, empty_reply *lib.Empty
 }
 
 // TODO: use this function to set flag verbos
-func (node *Node) Handshake(request *lib.Empty, ip_container *string) error {
+func (node *Node) Handshake(request *lib.Handshake, ip_container *string) error {
+	verbose_flag = request.Verbose
+
 	*ip_container = getIpAddress()
 
 	return nil

@@ -26,12 +26,18 @@ type Packet struct {
 	Source_address string
 	Index_pid      int
 	Message        string
+	Timestamp      time.Time
 }
 
 // This struct is used by sequencer to reply to each node of group multicast
 type Packet_sequencer struct {
 	Id  int
 	Pkt Packet
+}
+
+// This struct is used by frontend and node to estabilsh a specific type of communication
+type Handshake struct {
+	Verbose bool
 }
 
 // This struct is use for RPC method when the reply is not important
