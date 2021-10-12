@@ -114,7 +114,7 @@ func log_message(pkt *lib.Packet) {
 	lib.Check_error(err)
 
 	if verbose_flag {
-		_, err = f.WriteString(pkt.Timestamp.Format(time.RFC1123)[17:25] + " " + pkt.Source_address + " -> " + pkt.Message + "\n")
+		_, err = f.WriteString("[" + pkt.Timestamp.Format(time.RFC1123)[17:25] + "] " + pkt.Source_address + " -> " + pkt.Message + "\n")
 		lib.Check_error(err)
 	} else {
 		_, err = f.WriteString(pkt.Source_address + " -> " + pkt.Message + "\n")
