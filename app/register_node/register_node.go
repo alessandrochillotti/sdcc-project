@@ -71,7 +71,6 @@ func send_list() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
 
 	// Read file line by line, so scan every ip address
 	scanner := bufio.NewScanner(file)
@@ -93,31 +92,34 @@ func send_list() {
 		client.Close()
 	}
 
+	file.Close()
 }
 
 func main() {
+	// Build useful structures
+	chan_reg = make(chan bool)
+
 	nodes, _ := strconv.Atoi(os.Getenv("NODES"))
 
 	reg := new(Register)
-
-	// Register a new RPC server and the struct we created above
-	server := rpc.NewServer()
-	err := server.RegisterName("Register", reg)
-	utils.Check_error(err)
 
 	// Create file to maintain ip address and number port of all registered nodes
 	f, err := os.Create("/docker/register_volume/nodes.txt")
 	utils.Check_error(err)
 	f.Close()
 
+	// Register a new RPC server and the struct we created above
+	server := rpc.NewServer()
+	err = server.RegisterName("Register", reg)
+	utils.Check_error(err)
+
 	// Listen for incoming messages on port 1234
 	lis, err := net.Listen("tcp", ":1234")
 	utils.Check_error(err)
 
-	chan_reg = make(chan bool)
 	go server.Accept(lis)
 
-	defer lis.Close()
+	// defer lis.Close()
 
 	// Wait that every nodes is registered
 	for i := 0; i < nodes; i++ {
@@ -126,6 +128,4 @@ func main() {
 
 	// Once that every node is registered, then the register node send the list of nodes to each node of group multicast
 	send_list()
-
-	os.Exit(0)
 }

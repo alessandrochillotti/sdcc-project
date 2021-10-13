@@ -70,7 +70,7 @@ func get_list_container() string {
 
 	cnt := 0
 	for _, container := range containers {
-		if container.Names[0][1:10] == "app_node_" {
+		if container.Names[0][1:10] == "app_peer_" {
 			fmt.Printf("%d. %s\n", cnt+1, container.Names[0][1:])
 			cnt++
 		}
