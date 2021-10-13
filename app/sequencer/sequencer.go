@@ -6,18 +6,19 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
 	"net"
 	"net/rpc"
 	"os"
+	"strconv"
+	"strings"
 
 	"alessandro.it/app/utils"
 )
 
 type Sequencer struct {
 	current_id int
+	peer       []*rpc.Client
 }
 
 // Global variables
@@ -25,25 +26,10 @@ var seq *Sequencer
 var f *os.FileMode
 
 // This function send a specific message to each node of group multicast.
-func send_multicast_message(ip_address string, arg *utils.Packet, empty *utils.Empty) error {
-	// Prepare packet to send
-	pkt_seq := utils.Packet_sequencer{Id: seq.current_id, Pkt: *arg}
-
-	//Compute address destination
-	addr_node := ip_address + ":1234"
-
-	// Try to connect to addr_register_node
-	client, err := rpc.Dial("tcp", addr_node)
-	if err != nil {
-		log.Println("Error in dialing: ", err)
-		return err
-	}
-	defer client.Close()
-
+func send_single_message(peer_id int, arg *utils.Packet_sequencer, empty *utils.Empty) error {
 	// Call remote procedure and reply will store the RPC result
-	err = client.Call("Peer.Get_Message", &pkt_seq, &empty)
+	err := seq.peer[peer_id].Call("Peer.Get_Message", &arg, &empty)
 	if err != nil {
-		log.Fatal("Error in Peer.Get_Message: ", err)
 		return err
 	}
 
@@ -51,26 +37,36 @@ func send_multicast_message(ip_address string, arg *utils.Packet, empty *utils.E
 }
 
 // This function is called by each generic node to send packet to each node of group multicast
-func (reg *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
-	// Open file
-	file, err := os.Open("/docker/register_volume/nodes.txt")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
+func (seq *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
 	// Read file line by line, so scan every ip address
-	scanner := bufio.NewScanner(file)
-	reg.current_id = reg.current_id + 1
+	seq.current_id = seq.current_id + 1
+
+	// Prepare packet to send
+	pkt_seq := utils.Packet_sequencer{Id: seq.current_id, Pkt: *arg}
 
 	// Send to each node of group multicast the message
-	for scanner.Scan() {
-		go send_multicast_message(scanner.Text(), arg, empty)
+	for i := 0; i < len(seq.peer); i++ {
+		go send_single_message(i, &pkt_seq, empty)
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Println(err)
-		return err
+	return nil
+}
+
+// This RPC method of Node allow to get list from the registered node.
+func (seq *Sequencer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
+	var err error
+	nodes, _ := strconv.Atoi(os.Getenv("NODES"))
+
+	seq.peer = make([]*rpc.Client, nodes)
+
+	// Parse the list and put the addresses into destination array
+	addr_tmp := strings.Split(list.List_str, "\n")
+	for i := 0; i < nodes; i++ {
+		addr_node := addr_tmp[i] + ":1234"
+		seq.peer[i], err = rpc.Dial("tcp", addr_node)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

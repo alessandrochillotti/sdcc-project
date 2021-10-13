@@ -1,5 +1,8 @@
 FROM golang:1.16-alpine
 
+ARG NUMBER_NODE
+ENV NODES ${NUMBER_NODE}
+
 WORKDIR /app
 
 COPY ./sequencer/ ./sequencer/

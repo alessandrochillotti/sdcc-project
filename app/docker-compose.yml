@@ -49,13 +49,13 @@ services:
     build: 
       context: .
       dockerfile: sequencer/Dockerfile
+      args:
+        NUMBER_NODE: ${NUMBER_NODE}
     networks:
       my_net:
         ipv4_address: 10.5.0.253
     ports:
       - "8001:1234" # This maps port 8000 of my host to port 1234 of container
-    volumes:
-      - list_volume:/docker/register_volume/
     profiles:
       - sequencer
       
