@@ -49,7 +49,7 @@ func (p2 *Peer_2) Get_update(update *utils.Update, ack *utils.Ack) error {
 
 	for i := 0; i < conf.Nodes; i++ {
 		var empty utils.Empty
-		peer[i].Go("Peer.Get_ack", &ack_to_send, &empty, nil)
+		conn.Peer[i].Go("Peer.Get_ack", &ack_to_send, &empty, nil)
 	}
 
 	return nil
@@ -90,7 +90,7 @@ func (p2 *Peer_2) deliver_packet() {
 			for i := 0; i < conf.Nodes; i++ {
 				if i != p2.peer.index {
 					p2.mutex_queue.Lock()
-					update_max_timestamp := p2.ordered_queue.Get_update_max_timestamp(addresses[i])
+					update_max_timestamp := p2.ordered_queue.Get_update_max_timestamp(conn.Addresses[i])
 					p2.mutex_queue.Unlock()
 					deliver = deliver && (update_max_timestamp.Timestamp > head_node.Timestamp || (update_max_timestamp.Timestamp == head_node.Timestamp && head_node.Packet.Index_pid < update_max_timestamp.Packet.Index_pid))
 				}
@@ -125,7 +125,7 @@ func (p2 *Peer_2) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	// Send to each node of group multicast the message
 	for i := 0; i < conf.Nodes; i++ {
 		utils.Delay(3)
-		err := peer[i].Call("Peer.Get_update", &update, &ack)
+		err := conn.Peer[i].Call("Peer.Get_update", &update, &ack)
 		utils.Check_error(err)
 	}
 

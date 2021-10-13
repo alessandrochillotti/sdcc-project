@@ -18,6 +18,7 @@ import (
 	"alessandro.it/app/utils"
 )
 
+// Interface Peer base, so the common features to each type of peer.
 type Peer struct {
 	index int
 }
@@ -27,17 +28,10 @@ const MAX_QUEUE = 100
 const MAX_DELAY = 3
 
 /* Global variables */
-
-// Process information
 var conf *utils.Configuration
+var conn *utils.Connection
 
-// Connection variables
-var addresses []string
-var peer []*rpc.Client
-
-// Channel
-var channel_connection chan bool
-
+// Initialization of features of Peer
 func (p Peer) init_peer() {
 	p.index = 0
 }
@@ -100,10 +94,10 @@ func setup_connection(p *Peer) error {
 	var err error
 
 	for i := 0; i < conf.Nodes; i++ {
-		addr_node := addresses[i] + ":1234"
-		peer[i], err = rpc.Dial("tcp", addr_node)
+		addr_node := conn.Addresses[i] + ":1234"
+		conn.Peer[i], err = rpc.Dial("tcp", addr_node)
 		utils.Check_error(err)
-		if addresses[i] == getIpAddress() {
+		if conn.Addresses[i] == getIpAddress() {
 			p.index = i
 		}
 	}
@@ -116,10 +110,10 @@ func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 	// Parse the list and put the addresses into destination array
 	addr_tmp := strings.Split(list.List_str, "\n")
 	for i := 0; i < conf.Nodes; i++ {
-		addresses[i] = addr_tmp[i]
+		conn.Addresses[i] = addr_tmp[i]
 	}
 
-	channel_connection <- true
+	conn.Channel_connection <- true
 
 	return nil
 }
@@ -138,21 +132,18 @@ func init_configuration() {
 
 	conf = &utils.Configuration{Algorithm: algo, Nodes: nodes}
 
-	addresses = make([]string, conf.Nodes)
-	peer = make([]*rpc.Client, nodes)
+	conn = new(utils.Connection)
+	conn.Init_connection(nodes)
 }
 
 func main() {
-	// Allocation of channel
-	channel_connection = make(chan bool)
+	// Init phase
+	init_configuration()
 
 	// Create file for log of messages
 	f, err := os.Create("/docker/node_volume/" + getIpAddress() + "_log.txt")
 	utils.Check_error(err)
 	defer f.Close()
-
-	// Init phase
-	init_configuration()
 
 	// The node communicates with the register node to register his info
 	register_into_group()
@@ -181,7 +172,7 @@ func main() {
 		go receiver.Accept(lis)
 
 		// Setup the connection with the peer of group multicast after the reception of list
-		<-channel_connection
+		<-conn.Channel_connection
 
 		setup_connection(&peer_1.peer)
 		go peer_1.deliver_packet()
@@ -202,7 +193,7 @@ func main() {
 		go receiver.Accept(lis)
 
 		// Setup the connection with the peer of group multicast after the reception of list
-		<-channel_connection
+		<-conn.Channel_connection
 
 		setup_connection(&peer_2.peer)
 		go peer_2.deliver_packet()
@@ -224,7 +215,7 @@ func main() {
 		go receiver.Accept(lis)
 
 		// Setup the connection with the peer of group multicast after the reception of list
-		<-channel_connection
+		<-conn.Channel_connection
 
 		setup_connection(&peer_3.peer)
 		go peer_3.deliver_packet()

@@ -21,13 +21,13 @@ type Sequencer struct {
 }
 
 // Global variables
-var reg *Sequencer
+var seq *Sequencer
 var f *os.FileMode
 
 // This function send a specific message to each node of group multicast.
 func send_multicast_message(ip_address string, arg *utils.Packet, empty *utils.Empty) error {
 	// Prepare packet to send
-	pkt_seq := utils.Packet_sequencer{Id: reg.current_id, Pkt: *arg}
+	pkt_seq := utils.Packet_sequencer{Id: seq.current_id, Pkt: *arg}
 
 	//Compute address destination
 	addr_node := ip_address + ":1234"
@@ -77,11 +77,11 @@ func (reg *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
 }
 
 func main() {
-	reg = &Sequencer{current_id: 0}
+	seq = &Sequencer{current_id: 0}
 
 	// Register a sequencer methods
 	sequencer := rpc.NewServer()
-	err := sequencer.RegisterName("Sequencer", reg)
+	err := sequencer.RegisterName("Sequencer", seq)
 	if err != nil {
 		fmt.Println("Format of service is not correct: ", err)
 	}

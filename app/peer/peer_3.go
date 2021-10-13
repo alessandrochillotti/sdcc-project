@@ -117,7 +117,7 @@ func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 			time.Sleep(time.Duration(10) * time.Second)
 			first = false
 		}
-		err := peer[i].Call("Peer.Get_update", &update, &ack)
+		err := conn.Peer[i].Call("Peer.Get_update", &update, &ack)
 		utils.Check_error(err)
 	}
 
