@@ -70,6 +70,8 @@ func (p1 *Peer_1) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	client, err := rpc.Dial("tcp", addr_sequencer_node)
 	utils.Check_error(err)
 
+	utils.Delay(MAX_DELAY)
+
 	// Send packet to sequencer node
 	err = client.Call("Sequencer.Send_packet", &pkt, &empty)
 	utils.Check_error(err)

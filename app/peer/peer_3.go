@@ -29,7 +29,7 @@ Algorithm: 3
 
 This RPC method of Node allow to get update from the other node of group multicast
 */
-func (p3 *Peer_3) Get_update(update *utils.Update_2, ack *utils.Ack) error {
+func (p3 *Peer_3) Get_update(update *utils.Update_2, empty *utils.Empty) error {
 	if update.Packet.Source_address != getIpAddress() {
 		p3.mutex_clock.Lock()
 		p3.vector_clock.Increment(p3.peer.index)
@@ -92,10 +92,23 @@ func (p3 *Peer_3) deliver_packet() {
 	}
 }
 
+func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_2, empty_reply *utils.Empty) {
+	// first := true
+	/*
+		The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
+	*/
+	// if first && i == 2 {
+	// 	time.Sleep(time.Duration(10) * time.Second)
+	// 	first = false
+	// }
+	utils.Delay(MAX_DELAY)
+
+	err := conn.Peer[index_pid].Call("Peer.Get_update", update, empty_reply)
+	utils.Check_error(err)
+}
+
 // Frontend communication
 func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
-	var ack utils.Ack
-
 	// Build packet
 	pkt := utils.Packet{Source_address: getIpAddress(), Message: *text, Index_pid: p3.peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
@@ -105,20 +118,9 @@ func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	update := utils.Update_2{Timestamp: *p3.vector_clock, Packet: pkt}
 	p3.mutex_clock.Unlock()
 
-	first := true
-
 	// Send to each node of group multicast the message
 	for i := 0; i < conf.Nodes; i++ {
-		// utils.Delay(3)
-		/*
-			The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
-		*/
-		if first && i == 2 {
-			time.Sleep(time.Duration(10) * time.Second)
-			first = false
-		}
-		err := conn.Peer[i].Call("Peer.Get_update", &update, &ack)
-		utils.Check_error(err)
+		go p3.send_single_message(i, &update, empty_reply)
 	}
 
 	return nil

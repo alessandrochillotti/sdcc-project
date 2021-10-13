@@ -130,7 +130,8 @@ func main() {
 		fmt.Println("Insert the operation code:")
 		fmt.Println("1. Send message")
 		fmt.Println("2. Print messaged delivered")
-		fmt.Println("3. Exit")
+		fmt.Println("3. Test application")
+		fmt.Println("4. Exit")
 
 		fmt.Scanf("%d\n", &choice)
 
@@ -140,7 +141,6 @@ func main() {
 			text, err = in.ReadString('\n')
 			text = strings.TrimSpace(text)
 
-			fmt.Println("Vado de RPC")
 			client.Go("Peer.Get_message_from_frontend", &text, &empty, nil)
 
 			// Clear the shell
@@ -160,6 +160,9 @@ func main() {
 
 			break
 		case 3:
+			fmt.Println("Cooming soon")
+			break
+		case 4:
 			return
 		default:
 			fmt.Println("Codice operativo non supportato.")
