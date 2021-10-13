@@ -54,8 +54,7 @@ func get_free_port(index int) string {
 }
 
 func get_list_container() string {
-	var port uint16
-	port = 0
+	var list string
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -71,12 +70,17 @@ func get_list_container() string {
 	cnt := 0
 	for _, container := range containers {
 		if container.Names[0][1:10] == "app_peer_" {
-			fmt.Printf("%d. %s\n", cnt+1, container.Names[0][1:])
+			list = list + fmt.Sprintf("%d. %s\n", cnt+1, container.Names[0][1:])
 			cnt++
 		}
 	}
 
-	return strconv.Itoa(int(port))
+	if cnt == 0 {
+		fmt.Println("There are no containers.")
+		os.Exit(0)
+	}
+
+	return list
 }
 
 func handshake(client *rpc.Client, hand_reply *utils.Hand_reply) {
@@ -90,8 +94,6 @@ func handshake(client *rpc.Client, hand_reply *utils.Hand_reply) {
 
 	handshake_packet := &utils.Hand_request{Verbose: verbose}
 
-	fmt.Println("Stringo la mano")
-
 	err := client.Call("General.Handshake", &handshake_packet, hand_reply)
 	check_error(err)
 }
@@ -103,8 +105,9 @@ func main() {
 	var hand_reply utils.Hand_reply
 
 	// Print menù
+	list_container := get_list_container()
 	fmt.Println("Insert the number of one of following containers:")
-	get_list_container()
+	fmt.Printf("%s", list_container)
 	fmt.Scanf("%d\n", &selected_container)
 
 	// Dial of peer
