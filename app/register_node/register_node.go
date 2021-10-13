@@ -66,20 +66,23 @@ func send_list() {
 	}
 	list_nodes.List_str = string(nodes)
 
-	// Send list of node to sequencer
-	addr_node := "10.5.0.253:1234"
-	client_sequencer, err := rpc.Dial("tcp", addr_node)
-	if err != nil {
-		log.Println("Error in dialing: ", err)
-	}
+	algo, _ := strconv.Atoi(os.Getenv("ALGORITHM"))
+	if algo == 1 {
+		// Send list of node to sequencer
+		addr_node := "10.5.0.253:1234"
+		client_sequencer, err := rpc.Dial("tcp", addr_node)
+		if err != nil {
+			log.Println("Error in dialing: ", err)
+		}
 
-	// Call remote procedure and reply will store the RPC result
-	err = client_sequencer.Call("Sequencer.Get_list", &list_nodes, &empty)
-	if err != nil {
-		log.Fatal("Error in General.Get_list: ", err)
-	}
+		// Call remote procedure and reply will store the RPC result
+		err = client_sequencer.Call("Sequencer.Get_list", &list_nodes, &empty)
+		if err != nil {
+			log.Fatal("Error in General.Get_list: ", err)
+		}
 
-	client_sequencer.Close()
+		client_sequencer.Close()
+	}
 
 	// Open file
 	file, err := os.Open("/docker/register_volume/nodes.txt")
