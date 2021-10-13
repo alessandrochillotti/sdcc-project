@@ -113,3 +113,16 @@ func (l *Queue) Get_update_max_timestamp(ip_addr string) Update {
 
 	return update_max_timestamp
 }
+
+// Remove head
+func (l *Queue) Remove_head() {
+	if l.head != nil {
+		// fmt.Println("Sto rimuovendo la testa che ha id", l.head.Update.Packet.Id)
+		l.head = l.head.Next
+		if l.head == nil {
+			l.tail = nil
+		}
+		// fmt.Println("Ora la lista è:")
+		l.Display()
+	}
+}

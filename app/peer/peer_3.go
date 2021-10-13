@@ -13,7 +13,7 @@ import (
 type Peer_3 struct {
 	peer         Peer
 	vector_clock *utils.Vector_clock
-	waiting_list *utils.Queue_2
+	waiting_list *utils.Waiting_list
 	mutex_queue  sync.Mutex
 	mutex_clock  sync.Mutex
 }
@@ -21,7 +21,7 @@ type Peer_3 struct {
 func (p3 *Peer_3) init_peer_3() {
 	p3.peer.init_peer()
 	p3.vector_clock = &utils.Vector_clock{}
-	p3.waiting_list = &utils.Queue_2{}
+	p3.waiting_list = &utils.Waiting_list{}
 }
 
 /*
@@ -29,7 +29,7 @@ Algorithm: 3
 
 This RPC method of Node allow to get update from the other node of group multicast
 */
-func (p3 *Peer_3) Get_update(update *utils.Update_2, empty *utils.Empty) error {
+func (p3 *Peer_3) Get_update(update *utils.Update_vector, empty *utils.Empty) error {
 	if update.Packet.Source_address != getIpAddress() {
 		p3.mutex_clock.Lock()
 		p3.vector_clock.Increment(p3.peer.index)
@@ -37,7 +37,7 @@ func (p3 *Peer_3) Get_update(update *utils.Update_2, empty *utils.Empty) error {
 	}
 
 	// Build update node to insert the packet into queue
-	update_node := &utils.Node_2{Update: *update, Next: nil, Ack: 0}
+	update_node := &utils.Waiting_node{Update: *update, Next: nil, Ack: 0}
 
 	// Insert update node into queue
 	p3.mutex_queue.Lock()
@@ -92,7 +92,7 @@ func (p3 *Peer_3) deliver_packet() {
 	}
 }
 
-func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_2, empty_reply *utils.Empty) {
+func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_vector, empty_reply *utils.Empty) {
 	// first := true
 	/*
 		The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
@@ -115,7 +115,7 @@ func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	// Update the scalar clock and build update packet to send
 	p3.mutex_clock.Lock()
 	p3.vector_clock.Increment(p3.peer.index)
-	update := utils.Update_2{Timestamp: *p3.vector_clock, Packet: pkt}
+	update := utils.Update_vector{Timestamp: *p3.vector_clock, Packet: pkt}
 	p3.mutex_clock.Unlock()
 
 	// Send to each node of group multicast the message
