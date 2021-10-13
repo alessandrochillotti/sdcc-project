@@ -18,7 +18,6 @@ services:
         ipv4_address: 10.5.0.254
     ports:
       - "8000:1234" # This maps port 8000 of my host to port 1234 of container
-      - "4321"
     volumes:
       # The following volume is mounted in /var/lib/docker/volumes/app_list_volume/_data/nodes.txt
       - list_volume:/docker/register_volume/
@@ -36,7 +35,7 @@ services:
       # - "8001:1234"
       - "1234" #  This will expose the port 1234 of the container to an ephemeral 
                #  unallocated port on the host machine. It is not equal to line
-               #  37 because when use the following command
+               #  35 because when use the following command
                #                docker-compose up --scale node=X
                #  when it tries to create X containers it maps port of each of
                #  them to the port 8001 of my host and this is ok for the first
