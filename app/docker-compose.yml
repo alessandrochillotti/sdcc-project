@@ -12,6 +12,7 @@ services:
       context: .
       dockerfile: register_node/Dockerfile
       args:
+        ALGO: ${ALGO}
         NUMBER_NODE: ${NUMBER_NODE}
     networks:
       my_net:
