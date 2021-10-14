@@ -4,6 +4,7 @@ This file build a peer that run following the rules of algorithm 1.
 package main
 
 import (
+	"fmt"
 	"net/rpc"
 	"time"
 
@@ -12,14 +13,13 @@ import (
 
 // Definition of first type of Peer
 type Peer_1 struct {
-	peer              Peer
+	Peer              Peer
 	current_packet_id int
 	buffer            chan (utils.Packet_sequencer)
 }
 
 // Initialization of peer
-func (p1 *Peer_1) init_peer_1() {
-	p1.peer.init_peer()
+func (p1 *Peer_1) init_peer_1(username string) {
 	p1.buffer = make(chan utils.Packet_sequencer, MAX_QUEUE)
 }
 
@@ -57,7 +57,8 @@ func (p1 *Peer_1) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	var empty utils.Empty
 
 	// Build packet
-	pkt := utils.Packet{Source_address: getIpAddress(), Message: *text, Index_pid: p1.peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	fmt.Println("index=", p1.Peer.index)
+	pkt := utils.Packet{Username: p1.Peer.username, Source_address: getIpAddress(), Message: *text, Index_pid: p1.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
 	addr_sequencer_node := "10.5.0.253:1234"

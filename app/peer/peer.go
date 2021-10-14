@@ -20,7 +20,8 @@ import (
 
 // Interface Peer base, so the common features to each type of peer.
 type Peer struct {
-	index int
+	username string
+	index    int
 }
 
 /* Constant values */
@@ -31,10 +32,12 @@ const MAX_DELAY = 3
 var conf *utils.Configuration
 var conn *utils.Connection
 var channel_connection chan bool
+var channel_handshake chan bool
 
 // Initialization of features of Peer
-func (p Peer) init_peer() {
+func (p Peer) init_peer(username string) {
 	p.index = 0
+	p.username = username
 }
 
 // This function allows to register the node to communicate in multicast group.
@@ -65,7 +68,7 @@ func log_message(pkt *utils.Packet) {
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	utils.Check_error(err)
 
-	_, err = f.WriteString(pkt.Timestamp.Format(time.RFC1123)[17:25] + ";" + pkt.Source_address + ";" + pkt.Message + "\n")
+	_, err = f.WriteString(pkt.Timestamp.Format(time.RFC1123)[17:25] + ";" + pkt.Source_address + ";" + pkt.Username + ";" + pkt.Message + "\n")
 	utils.Check_error(err)
 
 	f.Close()
@@ -115,8 +118,11 @@ func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 }
 
 // This function allow to manage the log file to frontend
-func (p *Peer) Handshake(empty_request *utils.Empty, reply *utils.Hand_reply) error {
+func (p *Peer) Handshake(request *utils.Hand_request, reply *utils.Hand_reply) error {
+	p.username = request.Username
 	reply.Ip_address = getIpAddress()
+
+	channel_handshake <- true
 
 	return nil
 }
@@ -133,31 +139,49 @@ func init_configuration() {
 
 	// Build channel
 	channel_connection = make(chan bool)
+	channel_handshake = make(chan bool)
+}
+
+// This function make an handshake with frontend
+func (p *Peer) frontend_handshake() {
+	// Register a new RPC server and the struct we created above
+	frontend_handshake := rpc.NewServer()
+	err := frontend_handshake.RegisterName("Handshake", p)
+	utils.Check_error(err)
+
+	// Listen for incoming messages on port 4444
+	lis, err := net.Listen("tcp", ":4444")
+	utils.Check_error(err)
+
+	go frontend_handshake.Accept(lis)
+
+	<-channel_handshake
 }
 
 func main() {
-	// Init phase
+	peer_base := new(Peer)
 	init_configuration()
+
+	// Handshake
+	peer_base.frontend_handshake()
 
 	// Create file for log of messages
 	f, err := os.Create("/docker/node_volume/" + getIpAddress() + "_log.txt")
 	utils.Check_error(err)
 	defer f.Close()
 
-	// The node communicates with the register node to register his info
-	register_into_group()
-
 	// Register the service that allow the communication with frontend
 	receiver := rpc.NewServer()
-
-	peer_base := new(Peer)
 	err = receiver.RegisterName("General", peer_base)
 	utils.Check_error(err)
 
+	// The node communicates with the register node to register his info
+	register_into_group()
+
 	// Allocate object to use it into program execution
 	if conf.Algorithm == 1 {
-		peer_1 := new(Peer_1)
-		peer_1.init_peer_1()
+		peer_1 := &Peer_1{Peer: *peer_base}
+		peer_1.init_peer_1(peer_base.username)
 
 		err = receiver.RegisterName("Peer", peer_1)
 		utils.Check_error(err)
@@ -173,12 +197,12 @@ func main() {
 		// Setup the connection with the peer of group multicast after the reception of list
 		<-channel_connection
 
-		setup_connection(&peer_1.peer)
+		setup_connection(&peer_1.Peer)
 		go peer_1.deliver_packet()
 
 	} else if conf.Algorithm == 2 {
-		peer_2 := new(Peer_2)
-		peer_2.init_peer_2()
+		peer_2 := &Peer_2{Peer: *peer_base}
+		peer_2.init_peer_2(peer_base.username)
 
 		err := receiver.RegisterName("Peer", peer_2)
 		utils.Check_error(err)
@@ -194,11 +218,11 @@ func main() {
 		// Setup the connection with the peer of group multicast after the reception of list
 		<-channel_connection
 
-		setup_connection(&peer_2.peer)
+		setup_connection(&peer_2.Peer)
 		go peer_2.deliver_packet()
 
 	} else if conf.Algorithm == 3 {
-		peer_3 := new(Peer_3)
+		peer_3 := &Peer_3{Peer: *peer_base}
 		peer_3.init_peer_3()
 		peer_3.vector_clock.Init(conf.Nodes)
 
@@ -216,11 +240,10 @@ func main() {
 		// Setup the connection with the peer of group multicast after the reception of list
 		<-channel_connection
 
-		setup_connection(&peer_3.peer)
+		setup_connection(&peer_3.Peer)
 		go peer_3.deliver_packet()
 	}
 
 	for {
-
 	}
 }

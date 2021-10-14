@@ -12,7 +12,7 @@ import (
 
 // Definition of second type of Peer
 type Peer_2 struct {
-	peer          Peer
+	Peer          Peer
 	scalar_clock  int
 	ordered_queue *utils.Queue
 	mutex_queue   sync.Mutex
@@ -20,8 +20,7 @@ type Peer_2 struct {
 }
 
 // Initialization of peer
-func (p2 *Peer_2) init_peer_2() {
-	p2.peer.init_peer()
+func (p2 *Peer_2) init_peer_2(username string) {
 	p2.scalar_clock = 0
 	p2.ordered_queue = &utils.Queue{}
 }
@@ -80,7 +79,7 @@ func (p2 *Peer_2) deliver_packet() {
 			head_node := head.Update
 
 			for i := 0; i < conf.Nodes; i++ {
-				if i != p2.peer.index {
+				if i != p2.Peer.index {
 					p2.mutex_queue.Lock()
 					update_max_timestamp := p2.ordered_queue.Get_update_max_timestamp(conn.Addresses[i])
 					p2.mutex_queue.Unlock()
@@ -120,7 +119,7 @@ func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty
 // Frontend communication
 func (p2 *Peer_2) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Source_address: getIpAddress(), Message: *text, Index_pid: p2.peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p2.Peer.username, Source_address: getIpAddress(), Message: *text, Index_pid: p2.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p2.mutex_clock.Lock()

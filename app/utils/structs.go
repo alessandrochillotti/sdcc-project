@@ -14,6 +14,7 @@ type Whoami struct {
 
 // This is a packet that contain the message to send to each node og group multicast
 type Packet struct {
+	Username       string
 	Source_address string
 	Index_pid      int
 	Message        string
@@ -33,6 +34,9 @@ type Ack struct {
 }
 
 // This struct is used by frontend to estabilsh a specific type of communication
+type Hand_request struct {
+	Username string
+}
 type Hand_reply struct {
 	Ip_address string
 }

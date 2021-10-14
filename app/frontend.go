@@ -25,7 +25,7 @@ func check_error(err error) {
 	}
 }
 
-func get_free_port(index int) string {
+func get_local_port(index int, port_number uint16) string {
 	var port uint16
 	port = 0
 
@@ -44,7 +44,7 @@ func get_free_port(index int) string {
 	for _, container := range containers {
 		cnt++
 		for i := 0; cnt == index && i < len(container.Ports) && port == 0; i++ {
-			if container.Ports[i].PrivatePort == 1234 {
+			if container.Ports[i].PrivatePort == port_number {
 				port = container.Ports[i].PublicPort
 			}
 		}
@@ -107,9 +107,9 @@ func print_log(path_file string, verbose bool) {
 	for scanner_log.Scan() {
 		line := strings.Split(scanner_log.Text(), ";")
 		if verbose {
-			fmt.Printf("[%s] %s -> %s\n", line[0], line[1], line[2])
+			fmt.Printf("[%s] %s (%s) -> %s\n", line[0], line[1], line[2], line[3])
 		} else {
-			fmt.Printf("%s -> %s\n", line[1], line[2])
+			fmt.Printf("%s -> %s\n", line[2], line[3])
 		}
 	}
 	fmt.Println()
@@ -117,11 +117,37 @@ func print_log(path_file string, verbose bool) {
 	log_file.Close()
 }
 
+func handshake(container int) (string, string) {
+	var reply *utils.Hand_reply
+
+	addr_node := "127.0.0.1:" + get_local_port(container, (uint16(4444)))
+
+	peer_handshake, err := rpc.Dial("tcp", addr_node)
+	if err != nil {
+		log.Println("Error in dialing: ", err)
+	}
+
+	fmt.Println("Choose a username")
+	in := bufio.NewReader(os.Stdin)
+	username, err := in.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	// Call remote procedure and reply will store the RPC result
+	request := &utils.Hand_request{Username: username}
+	err = peer_handshake.Call("Handshake.Handshake", &request, &reply)
+	if err != nil {
+		log.Fatal("Error in General.Get_list: ", err)
+	}
+
+	peer_handshake.Close()
+
+	return reply.Ip_address, username
+}
+
 func main() {
 	var text string
 	var choice int
 	var empty utils.Empty
-	var hand_reply utils.Hand_reply
 
 	// Print menù
 	list_container := get_list_container()
@@ -129,17 +155,15 @@ func main() {
 	fmt.Printf("%s", list_container)
 	fmt.Scanf("%d\n", &selected_container)
 
+	ip_addr, username := handshake(selected_container)
+
 	// Dial of peer
-	addr_node := "127.0.0.1:" + get_free_port(selected_container)
-	client, err := rpc.Dial("tcp", addr_node)
+	addr_node := "127.0.0.1:" + get_local_port(selected_container, (uint16(1234)))
+	peer, err := rpc.Dial("tcp", addr_node)
 	utils.Check_error(err)
 
-	// Handshake with peer
-	err = client.Call("General.Handshake", &empty, &hand_reply)
-	check_error(err)
-
 	// Prepare information to print log
-	path_file := "./volumes/log_node/" + hand_reply.Ip_address + "_log.txt"
+	path_file := "./volumes/log_node/" + ip_addr + "_log.txt"
 	verbose := catch_verbose_flag()
 
 	// Clear the shell
@@ -148,7 +172,7 @@ func main() {
 	cmd.Run()
 
 	for {
-		fmt.Println("Welcome", hand_reply.Ip_address)
+		fmt.Println("Welcome", username)
 		fmt.Println("Insert the operation code:")
 		fmt.Println("1. Send message")
 		fmt.Println("2. Print messaged delivered")
@@ -162,7 +186,7 @@ func main() {
 			text, err = in.ReadString('\n')
 			text = strings.TrimSpace(text)
 
-			client.Go("Peer.Get_message_from_frontend", &text, &empty, nil)
+			peer.Go("Peer.Get_message_from_frontend", &text, &empty, nil)
 
 			// Clear the shell
 			cmd := exec.Command("clear")

@@ -134,8 +134,6 @@ func main() {
 
 	go server.Accept(lis)
 
-	// defer lis.Close()
-
 	// Wait that every nodes is registered
 	for i := 0; i < nodes; i++ {
 		<-chan_reg
@@ -143,4 +141,7 @@ func main() {
 
 	// Once that every node is registered, then the register node send the list of nodes to each node of group multicast
 	send_list()
+
+	// Close listener
+	lis.Close()
 }

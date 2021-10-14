@@ -12,7 +12,7 @@ import (
 
 // Definition of third type of Peer
 type Peer_3 struct {
-	peer         Peer
+	Peer         Peer
 	vector_clock *utils.Vector_clock
 	waiting_list *utils.Waiting_list
 	mutex_queue  sync.Mutex
@@ -21,7 +21,6 @@ type Peer_3 struct {
 
 // Initialization of peer
 func (p3 *Peer_3) init_peer_3() {
-	p3.peer.init_peer()
 	p3.vector_clock = &utils.Vector_clock{}
 	p3.waiting_list = &utils.Waiting_list{}
 }
@@ -30,7 +29,7 @@ func (p3 *Peer_3) init_peer_3() {
 func (p3 *Peer_3) Get_update(update *utils.Update_vector, empty *utils.Empty) error {
 	if update.Packet.Source_address != getIpAddress() {
 		p3.mutex_clock.Lock()
-		p3.vector_clock.Increment(p3.peer.index)
+		p3.vector_clock.Increment(p3.Peer.index)
 		p3.mutex_clock.Unlock()
 	}
 
@@ -105,11 +104,11 @@ func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_vector
 // This function get the message from frontend and send it in multicast
 func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Source_address: getIpAddress(), Message: *text, Index_pid: p3.peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p3.Peer.username, Source_address: getIpAddress(), Message: *text, Index_pid: p3.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p3.mutex_clock.Lock()
-	p3.vector_clock.Increment(p3.peer.index)
+	p3.vector_clock.Increment(p3.Peer.index)
 	update := utils.Update_vector{Timestamp: *p3.vector_clock, Packet: pkt}
 	p3.mutex_clock.Unlock()
 
