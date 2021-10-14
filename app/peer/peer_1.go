@@ -41,6 +41,7 @@ This function check if there are packets to deliver, according to current_id + 1
 func (p1 *Peer_1) deliver_packet() {
 	for {
 		current_packet := <-p1.buffer
+
 		if p1.current_packet_id+1 == current_packet.Id {
 			// Update expected id of packet
 			p1.current_packet_id = p1.current_packet_id + 1

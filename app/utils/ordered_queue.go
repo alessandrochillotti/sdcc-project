@@ -27,7 +27,6 @@ type Update struct {
 
 // This function insert update message into queue maintaining it sorted for timestamp
 func (l *Queue) Update_into_queue(update *Node) {
-	// fmt.Println("Sto inserendo il nodo con id", update.Update.Packet.Id)
 	if l.head == nil {
 		l.head = update
 		l.tail = update
@@ -92,7 +91,7 @@ func (l *Queue) Get_head() *Node {
 // Debug function
 func (l *Queue) Display() {
 	current_node := l.head
-	fmt.Println("[timestamp, pid, id]")
+	fmt.Println("[timestamp, pid]")
 	for current_node != nil {
 		fmt.Printf("[%v, %d] -> ", current_node.Update.Timestamp, current_node.Update.Packet.Index_pid)
 		current_node = current_node.Next
@@ -117,12 +116,10 @@ func (l *Queue) Get_update_max_timestamp(ip_addr string) Update {
 // Remove head
 func (l *Queue) Remove_head() {
 	if l.head != nil {
-		// fmt.Println("Sto rimuovendo la testa che ha id", l.head.Update.Packet.Id)
 		l.head = l.head.Next
 		if l.head == nil {
 			l.tail = nil
 		}
-		// fmt.Println("Ora la lista è:")
 		l.Display()
 	}
 }
