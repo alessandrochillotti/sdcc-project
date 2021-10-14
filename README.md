@@ -17,11 +17,11 @@ Per l'utilizzazione dell'applicazione è stato sviluppato un semplice frontend c
 - Stampa della lista dei messaggi consegnati a livello applicativo.
 Per eseguire il frontend, dopo aver instaziato l'applicazione, basta avviare l'applicazione in Go con il seguente comando:
 ```[bash]
-go run frontend.go
+./frontend.go
 ```
 Inoltre, è possibile specificare il flag verbose per avere più dettagli relativi ai messaggi consegnati al livello applicativo. In particolare:
 ```[bash]
-go run frontend.go -V
+./frontend.go -V
 ```
 ### Rimozione container
 Per rimuove i container creati dall'esecuzione dell'applicazione utilizzare il seguente comando:
