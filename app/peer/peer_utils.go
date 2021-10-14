@@ -7,9 +7,7 @@ import (
 	"alessandro.it/app/utils"
 )
 
-/*
-This function return the ip address of current node.
-*/
+// This function return the ip address of current node.
 func getIpAddress() string {
 	ip_address := "0.0.0.0"
 	host, _ := os.Hostname()
@@ -24,9 +22,7 @@ func getIpAddress() string {
 	return ip_address
 }
 
-/*
-This function build a struct that contains the info to register the node.
-*/
+// This function build a struct that contains the info to register the node.
 func build_whoami_struct(whoami_to_register *utils.Whoami) {
 	whoami_to_register.Ip_address = getIpAddress()
 	whoami_to_register.Port = "1234"

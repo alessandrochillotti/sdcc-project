@@ -25,7 +25,7 @@ type Sequencer struct {
 var seq *Sequencer
 var f *os.FileMode
 
-// This function send a specific message to each node of group multicast.
+// This function send a specific message to each node of group multicast
 func send_single_message(peer_id int, arg *utils.Packet_sequencer, empty *utils.Empty) error {
 	// Call remote procedure and reply will store the RPC result
 	err := seq.peer[peer_id].Call("Peer.Get_Message", &arg, &empty)
@@ -52,7 +52,7 @@ func (seq *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
 	return nil
 }
 
-// This RPC method of Node allow to get list from the registered node.
+// This RPC method of Node allow to get list from the registered node
 func (seq *Sequencer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 	var err error
 	nodes, _ := strconv.Atoi(os.Getenv("NODES"))
@@ -92,9 +92,5 @@ func main() {
 	go sequencer.Accept(lis)
 
 	for {
-		/*
-			Since that the partnership is static, the sequencer stay up and running for all time
-			without looking if a peer is up or down.
-		*/
 	}
 }

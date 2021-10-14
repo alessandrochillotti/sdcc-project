@@ -52,9 +52,7 @@ func (reg *Register) Register_node(arg *utils.Whoami, empty *utils.Empty) error 
 	return nil
 }
 
-/*
-This function allow to send to each node of group multicast the list of nodes registered.
-*/
+// This function allow to send to each node of group multicast the list of nodes registered.
 func send_list() {
 	var list_nodes utils.List_of_nodes
 	var empty utils.Empty

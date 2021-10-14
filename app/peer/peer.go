@@ -70,7 +70,7 @@ func log_message(pkt *utils.Packet) {
 	f.Close()
 }
 
-// This function has the goal to clear the shell and print all messages received and sended by the current peer.
+// This function has the goal to clear the shell and print all messages received and sended by the current peer
 func print_chat() {
 	// Clear the screen
 	cmd := exec.Command("clear")
@@ -84,7 +84,7 @@ func print_chat() {
 	print(list)
 }
 
-// This function, after reception of list from register node, allow to setup connection with each node of group multicast.
+// This function, after reception of list from register node, allow to setup connection with each node of group multicast
 func setup_connection(p *Peer) error {
 	var err error
 
@@ -100,7 +100,7 @@ func setup_connection(p *Peer) error {
 	return nil
 }
 
-// This RPC method of Node allow to get list from the registered node.
+// This RPC method of Node allow to get list from the registered node
 func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 	// Parse the list and put the addresses into destination array
 	addr_tmp := strings.Split(list.List_str, "\n")
@@ -113,12 +113,14 @@ func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 	return nil
 }
 
+// This function allow to manage the log file to frontend
 func (p *Peer) Handshake(emoty *utils.Empty, reply *utils.Hand_reply) error {
 	reply.Ip_address = getIpAddress()
 
 	return nil
 }
 
+// This function allow to init the information valid to manage the system
 func init_configuration() {
 	algo, _ := strconv.Atoi(os.Getenv("ALGORITHM"))
 	nodes, _ := strconv.Atoi(os.Getenv("NODES"))

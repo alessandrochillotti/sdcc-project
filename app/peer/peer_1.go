@@ -10,12 +10,14 @@ import (
 	"alessandro.it/app/utils"
 )
 
+// Definition of first type of Peer
 type Peer_1 struct {
 	peer              Peer
 	current_packet_id int
 	buffer            chan (utils.Packet_sequencer)
 }
 
+// Initialization of peer
 func (p1 *Peer_1) init_peer_1() {
 	p1.peer.init_peer()
 	p1.buffer = make(chan utils.Packet_sequencer, MAX_QUEUE)
@@ -33,11 +35,7 @@ func (p1 *Peer_1) Get_Message(pkt *utils.Packet_sequencer, empty *utils.Empty) e
 	return nil
 }
 
-/*
-Algorithm: 1
-
-This function check if there are packets to deliver, according to current_id + 1 == current_packet.Id.
-*/
+// This function check if there are packets to deliver, according to current_id + 1 == current_packet.Id.
 func (p1 *Peer_1) deliver_packet() {
 	for {
 		current_packet := <-p1.buffer
@@ -48,9 +46,6 @@ func (p1 *Peer_1) deliver_packet() {
 
 			// Deliver the packet to application layer
 			log_message(&current_packet.Pkt)
-
-			// print_chat()
-
 		} else {
 			p1.buffer <- current_packet
 		}

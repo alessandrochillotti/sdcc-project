@@ -10,6 +10,7 @@ import (
 	"alessandro.it/app/utils"
 )
 
+// Definition of second type of Peer
 type Peer_2 struct {
 	peer          Peer
 	scalar_clock  int
@@ -18,17 +19,14 @@ type Peer_2 struct {
 	mutex_clock   sync.Mutex
 }
 
+// Initialization of peer
 func (p2 *Peer_2) init_peer_2() {
 	p2.peer.init_peer()
 	p2.scalar_clock = 0
 	p2.ordered_queue = &utils.Queue{}
 }
 
-/*
-Algorithm: 2
-
-This RPC method of Node allow to get update from the other node of group multicast
-*/
+// This RPC method of Node allow to get update from the other node of group multicast
 func (p2 *Peer_2) Get_update(update *utils.Update, empty *utils.Empty) error {
 	p2.mutex_clock.Lock()
 	p2.scalar_clock = utils.Max(p2.scalar_clock, update.Timestamp)
@@ -55,11 +53,7 @@ func (p2 *Peer_2) Get_update(update *utils.Update, empty *utils.Empty) error {
 	return nil
 }
 
-/*
-Algorithm: 2
-
-This RPC method of Node allow to receive ack from other nodes of group multicast.
-*/
+// This RPC method of Node allow to receive ack from other nodes of group multicast.
 func (p2 *Peer_2) Get_ack(ack *utils.Ack, empty *utils.Empty) error {
 	acked := false
 	for acked == false {
@@ -72,8 +66,6 @@ func (p2 *Peer_2) Get_ack(ack *utils.Ack, empty *utils.Empty) error {
 }
 
 /*
-Algorithm: 2
-
 This function check if there are packet to deliver, so the following conditions must be checked:
 	1. The firse message in the local queue must have acked by every node
 	2. The other node of group must not have a packet with timestamp less than the considering packet to deliver
@@ -109,6 +101,7 @@ func (p2 *Peer_2) deliver_packet() {
 	}
 }
 
+// This function send a single message to a single node
 func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty_reply *utils.Empty) {
 	// first := true
 	/*
