@@ -32,10 +32,7 @@ type Ack struct {
 	Timestamp int
 }
 
-// Thiose structs is used by frontend to estabilsh a specific type of communication
-type Hand_request struct {
-	Verbose bool
-}
+// This struct is used by frontend to estabilsh a specific type of communication
 type Hand_reply struct {
 	Ip_address string
 }

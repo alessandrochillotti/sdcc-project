@@ -30,6 +30,7 @@ const MAX_DELAY = 3
 /* Global variables */
 var conf *utils.Configuration
 var conn *utils.Connection
+var channel_connection chan bool
 
 // Initialization of features of Peer
 func (p Peer) init_peer() {
@@ -108,13 +109,13 @@ func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 		conn.Addresses[i] = addr_tmp[i]
 	}
 
-	conn.Channel_connection <- true
+	channel_connection <- true
 
 	return nil
 }
 
 // This function allow to manage the log file to frontend
-func (p *Peer) Handshake(emoty *utils.Empty, reply *utils.Hand_reply) error {
+func (p *Peer) Handshake(empty_request *utils.Empty, reply *utils.Hand_reply) error {
 	reply.Ip_address = getIpAddress()
 
 	return nil
@@ -129,6 +130,9 @@ func init_configuration() {
 
 	conn = new(utils.Connection)
 	conn.Init_connection(nodes)
+
+	// Build channel
+	channel_connection = make(chan bool)
 }
 
 func main() {
@@ -167,7 +171,7 @@ func main() {
 		go receiver.Accept(lis)
 
 		// Setup the connection with the peer of group multicast after the reception of list
-		<-conn.Channel_connection
+		<-channel_connection
 
 		setup_connection(&peer_1.peer)
 		go peer_1.deliver_packet()
@@ -188,7 +192,7 @@ func main() {
 		go receiver.Accept(lis)
 
 		// Setup the connection with the peer of group multicast after the reception of list
-		<-conn.Channel_connection
+		<-channel_connection
 
 		setup_connection(&peer_2.peer)
 		go peer_2.deliver_packet()
@@ -210,7 +214,7 @@ func main() {
 		go receiver.Accept(lis)
 
 		// Setup the connection with the peer of group multicast after the reception of list
-		<-conn.Channel_connection
+		<-channel_connection
 
 		setup_connection(&peer_3.peer)
 		go peer_3.deliver_packet()

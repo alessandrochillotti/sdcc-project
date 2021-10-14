@@ -103,10 +103,10 @@ func (p2 *Peer_2) deliver_packet() {
 
 // This function send a single message to a single node
 func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty_reply *utils.Empty) {
-	// first := true
 	/*
 		The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
 	*/
+	// first := true
 	// if first && i == 2 {
 	// 	time.Sleep(time.Duration(10) * time.Second)
 	// 	first = false
