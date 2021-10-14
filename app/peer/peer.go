@@ -64,13 +64,8 @@ func log_message(pkt *utils.Packet) {
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	utils.Check_error(err)
 
-	if conf.Verbose {
-		_, err = f.WriteString("[" + pkt.Timestamp.Format(time.RFC1123)[17:25] + "] " + pkt.Source_address + " -> " + pkt.Message + "\n")
-		utils.Check_error(err)
-	} else {
-		_, err = f.WriteString(pkt.Source_address + " -> " + pkt.Message + "\n")
-		utils.Check_error(err)
-	}
+	_, err = f.WriteString(pkt.Timestamp.Format(time.RFC1123)[17:25] + ";" + pkt.Source_address + ";" + pkt.Message + "\n")
+	utils.Check_error(err)
 
 	f.Close()
 }
@@ -118,9 +113,7 @@ func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 	return nil
 }
 
-func (p *Peer) Handshake(request *utils.Hand_request, reply *utils.Hand_reply) error {
-	conf.Verbose = request.Verbose
-
+func (p *Peer) Handshake(emoty *utils.Empty, reply *utils.Hand_reply) error {
 	reply.Ip_address = getIpAddress()
 
 	return nil

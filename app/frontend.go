@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/rpc"
 	"os"
 	"os/exec"
@@ -83,19 +83,38 @@ func get_list_container() string {
 	return list
 }
 
-func handshake(client *rpc.Client, hand_reply *utils.Hand_reply) {
-	verbose := false
-
+func catch_verbose_flag() bool {
 	for i := 0; i < len(os.Args); i++ {
 		if os.Args[i] == "-V" {
-			verbose = true
+			return true
 		}
 	}
 
-	handshake_packet := &utils.Hand_request{Verbose: verbose}
+	return false
+}
 
-	err := client.Call("General.Handshake", &handshake_packet, hand_reply)
-	check_error(err)
+func print_log(path_file string, verbose bool) {
+	log_file, err := os.Open(path_file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scanner_log := bufio.NewScanner(log_file)
+	if err := scanner_log.Err(); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Delivered messages")
+	for scanner_log.Scan() {
+		line := strings.Split(scanner_log.Text(), ";")
+		if verbose {
+			fmt.Printf("[%s] %s -> %s\n", line[0], line[1], line[2])
+		} else {
+			fmt.Printf("%s -> %s\n", line[1], line[2])
+		}
+	}
+	fmt.Println()
+
+	log_file.Close()
 }
 
 func main() {
@@ -116,9 +135,12 @@ func main() {
 	utils.Check_error(err)
 
 	// Handshake with peer
-	handshake(client, &hand_reply)
+	err = client.Call("General.Handshake", &empty, &hand_reply)
+	check_error(err)
 
+	// Prepare information to print log
 	path_file := "./volumes/log_node/" + hand_reply.Ip_address + "_log.txt"
+	verbose := catch_verbose_flag()
 
 	// Clear the shell
 	cmd := exec.Command("clear")
@@ -130,8 +152,7 @@ func main() {
 		fmt.Println("Insert the operation code:")
 		fmt.Println("1. Send message")
 		fmt.Println("2. Print messaged delivered")
-		fmt.Println("3. Test application")
-		fmt.Println("4. Exit")
+		fmt.Println("3. Exit")
 
 		fmt.Scanf("%d\n", &choice)
 
@@ -155,14 +176,10 @@ func main() {
 			cmd.Stdout = os.Stdout
 			cmd.Run()
 
-			content, _ := ioutil.ReadFile(path_file)
-			fmt.Println(string(content))
+			print_log(path_file, verbose)
 
 			break
 		case 3:
-			fmt.Println("Cooming soon")
-			break
-		case 4:
 			return
 		default:
 			fmt.Println("Codice operativo non supportato.")
