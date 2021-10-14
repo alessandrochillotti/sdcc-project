@@ -21,12 +21,8 @@ type Sequencer struct {
 	peer       []*rpc.Client
 }
 
-// Global variables
-var seq *Sequencer
-var f *os.FileMode
-
 // This function send a specific message to each node of group multicast
-func send_single_message(peer_id int, arg *utils.Packet_sequencer, empty *utils.Empty) error {
+func (seq *Sequencer) send_single_message(peer_id int, arg *utils.Packet_sequencer, empty *utils.Empty) error {
 	// Call remote procedure and reply will store the RPC result
 	err := seq.peer[peer_id].Call("Peer.Get_Message", &arg, &empty)
 	if err != nil {
@@ -46,7 +42,7 @@ func (seq *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
 
 	// Send to each node of group multicast the message
 	for i := 0; i < len(seq.peer); i++ {
-		go send_single_message(i, &pkt_seq, empty)
+		go seq.send_single_message(i, &pkt_seq, empty)
 	}
 
 	return nil
@@ -73,7 +69,7 @@ func (seq *Sequencer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) er
 }
 
 func main() {
-	seq = &Sequencer{current_id: 0}
+	seq := &Sequencer{current_id: 0}
 
 	// Register a sequencer methods
 	sequencer := rpc.NewServer()

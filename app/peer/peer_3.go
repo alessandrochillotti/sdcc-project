@@ -42,15 +42,13 @@ func (p3 *Peer_3) Get_update(update *utils.Update_vector, empty *utils.Empty) er
 	p3.waiting_list.Append(update_node)
 	p3.mutex_queue.Unlock()
 
-	p3.vector_clock.Print()
-
 	return nil
 }
 
 /*
 This function check if there are packet to deliver, so the following conditions must be checked:
-	1. The message inviato from p_j to current process is the expected message from p_j
-	2. The current process has seen every messahe that p_j has seen
+	1. The message inviato from p_j to current process is the expected message from p_j.
+	2. The current process has seen every messahe that p_j has seen.
 */
 func (p3 *Peer_3) deliver_packet() {
 	current_index := 1
@@ -77,7 +75,7 @@ func (p3 *Peer_3) deliver_packet() {
 
 		if deliver {
 			// Update the vector clock
-			p3.vector_clock.Update_with_max(node_to_deliver.Update.Timestamp)
+			p3.vector_clock.Increment(index_pid_to_deliver)
 
 			// Deliver the packet to application layer
 			log_message(&node_to_deliver.Update.Packet)

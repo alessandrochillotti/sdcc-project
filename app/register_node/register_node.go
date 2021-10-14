@@ -20,7 +20,6 @@ import (
 
 type Register struct{}
 
-var f *os.FileMode
 var mutex_write sync.Mutex
 var chan_reg chan (bool)
 

@@ -22,12 +22,6 @@ func (v *Vector_clock) Increment(index int) {
 	v.Clocks[index] = v.Clocks[index] + 1
 }
 
-func (v *Vector_clock) Update_with_max(v2 Vector_clock) {
-	for i := 0; i < len(v.Clocks); i++ {
-		v.Clocks[i] = Max(v.Clocks[i], v2.Clocks[i])
-	}
-}
-
 func (v *Vector_clock) Print() {
 	fmt.Printf("[ ")
 	var i int
