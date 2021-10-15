@@ -107,7 +107,7 @@ func print_log(path_file string, verbose bool) {
 	for scanner_log.Scan() {
 		line := strings.Split(scanner_log.Text(), ";")
 		if verbose {
-			fmt.Printf("[%s] %s (%s) -> %s\n", line[0], line[1], line[2], line[3])
+			fmt.Printf("[%s] %s (%s) -> %s\n", line[0], line[2], line[1], line[3])
 		} else {
 			fmt.Printf("%s -> %s\n", line[2], line[3])
 		}

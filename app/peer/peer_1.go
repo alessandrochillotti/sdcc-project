@@ -4,7 +4,6 @@ This file build a peer that run following the rules of algorithm 1.
 package main
 
 import (
-	"fmt"
 	"net/rpc"
 	"time"
 
@@ -45,7 +44,7 @@ func (p1 *Peer_1) deliver_packet() {
 			p1.current_packet_id = p1.current_packet_id + 1
 
 			// Deliver the packet to application layer
-			log_message(&current_packet.Pkt)
+			p1.Peer.log_message(&current_packet.Pkt)
 		} else {
 			p1.buffer <- current_packet
 		}
@@ -57,8 +56,7 @@ func (p1 *Peer_1) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	var empty utils.Empty
 
 	// Build packet
-	fmt.Println("index=", p1.Peer.index)
-	pkt := utils.Packet{Username: p1.Peer.username, Source_address: getIpAddress(), Message: *text, Index_pid: p1.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p1.Peer.username, Source_address: p1.Peer.ip_address, Message: *text, Index_pid: p1.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
 	addr_sequencer_node := "10.5.0.253:1234"

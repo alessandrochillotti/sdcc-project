@@ -18,15 +18,18 @@ import (
 	"alessandro.it/app/utils"
 )
 
-// Interface Peer base, so the common features to each type of peer.
+// Interface Peer base, so the common features to each type of peer
 type Peer struct {
-	username string
-	index    int
+	index      int
+	ip_address string
+	port       int
+	username   string
 }
 
 /* Constant values */
 const MAX_QUEUE = 100
 const MAX_DELAY = 3
+const PORT = 1234
 
 /* Global variables */
 var conf *utils.Configuration
@@ -34,14 +37,8 @@ var conn *utils.Connection
 var channel_connection chan bool
 var channel_handshake chan bool
 
-// Initialization of features of Peer
-func (p Peer) init_peer(username string) {
-	p.index = 0
-	p.username = username
-}
-
 // This function allows to register the node to communicate in multicast group.
-func register_into_group() {
+func (p *Peer) register_into_group() {
 	var whoami_to_register utils.Whoami
 	var empty utils.Empty
 
@@ -62,9 +59,9 @@ func register_into_group() {
 }
 
 // This function log message into file: this has the value of delivery to application layer.
-func log_message(pkt *utils.Packet) {
+func (p *Peer) log_message(pkt *utils.Packet) {
 	// Open file into volume docker
-	path_file := "/docker/node_volume/" + getIpAddress() + "_log.txt"
+	path_file := "/docker/node_volume/" + p.ip_address + "_log.txt"
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	utils.Check_error(err)
 
@@ -75,14 +72,14 @@ func log_message(pkt *utils.Packet) {
 }
 
 // This function has the goal to clear the shell and print all messages received and sended by the current peer
-func print_chat() {
+func (p *Peer) print_chat() {
 	// Clear the screen
 	cmd := exec.Command("clear")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
 
 	// Print all messages, received and sended
-	content, err := ioutil.ReadFile("/docker/node_volume/" + getIpAddress() + "_log.txt")
+	content, err := ioutil.ReadFile("/docker/node_volume/" + p.ip_address + "_log.txt")
 	utils.Check_error(err)
 	list := string(content)
 	print(list)
@@ -96,7 +93,7 @@ func setup_connection(p *Peer) error {
 		addr_node := conn.Addresses[i] + ":1234"
 		conn.Peer[i], err = rpc.Dial("tcp", addr_node)
 		utils.Check_error(err)
-		if conn.Addresses[i] == getIpAddress() {
+		if conn.Addresses[i] == p.ip_address {
 			p.index = i
 		}
 	}
@@ -117,16 +114,6 @@ func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 	return nil
 }
 
-// This function allow to manage the log file to frontend
-func (p *Peer) Handshake(request *utils.Hand_request, reply *utils.Hand_reply) error {
-	p.username = request.Username
-	reply.Ip_address = getIpAddress()
-
-	channel_handshake <- true
-
-	return nil
-}
-
 // This function allow to init the information valid to manage the system
 func init_configuration() {
 	algo, _ := strconv.Atoi(os.Getenv("ALGORITHM"))
@@ -142,41 +129,35 @@ func init_configuration() {
 	channel_handshake = make(chan bool)
 }
 
-// This function make an handshake with frontend
-func (p *Peer) frontend_handshake() {
-	// Register a new RPC server and the struct we created above
-	frontend_handshake := rpc.NewServer()
-	err := frontend_handshake.RegisterName("Handshake", p)
-	utils.Check_error(err)
-
-	// Listen for incoming messages on port 4444
-	lis, err := net.Listen("tcp", ":4444")
-	utils.Check_error(err)
-
-	go frontend_handshake.Accept(lis)
-
-	<-channel_handshake
-}
-
 func main() {
-	peer_base := new(Peer)
+	hand_peer := new(Handshake)
 	init_configuration()
 
-	// Handshake
-	peer_base.frontend_handshake()
+	// Handshake phase
+	listener_handshake := hand_peer.frontend_handshake()
+	defer (*listener_handshake).Close()
+
+	// Wait the end of handshake phase
+	<-channel_handshake
+
+	// Build a new peer
+	peer_base := &Peer{index: hand_peer.New_peer.index, ip_address: hand_peer.New_peer.ip_address, port: hand_peer.New_peer.port, username: hand_peer.New_peer.username}
+
+	// Register the base services of general Peer
+	receiver := rpc.NewServer()
+	err := receiver.RegisterName("General", peer_base)
+	utils.Check_error(err)
+	listener, err := net.Listen("tcp", ":1234")
+	utils.Check_error(err)
+	defer listener.Close()
+
+	// The node communicates with the recorder node for registration in the multicast group
+	peer_base.register_into_group()
 
 	// Create file for log of messages
-	f, err := os.Create("/docker/node_volume/" + getIpAddress() + "_log.txt")
+	f, err := os.Create("/docker/node_volume/" + peer_base.ip_address + "_log.txt")
 	utils.Check_error(err)
 	defer f.Close()
-
-	// Register the service that allow the communication with frontend
-	receiver := rpc.NewServer()
-	err = receiver.RegisterName("General", peer_base)
-	utils.Check_error(err)
-
-	// The node communicates with the register node to register his info
-	register_into_group()
 
 	// Allocate object to use it into program execution
 	if conf.Algorithm == 1 {
@@ -186,13 +167,8 @@ func main() {
 		err = receiver.RegisterName("Peer", peer_1)
 		utils.Check_error(err)
 
-		// Listen for incoming messages on port 1234
-		lis, err := net.Listen("tcp", ":1234")
-		utils.Check_error(err)
-		defer lis.Close()
-
 		// Use goroutine to implement a lightweight thread to manage the coming of new messages
-		go receiver.Accept(lis)
+		go receiver.Accept(listener)
 
 		// Setup the connection with the peer of group multicast after the reception of list
 		<-channel_connection
@@ -207,13 +183,8 @@ func main() {
 		err := receiver.RegisterName("Peer", peer_2)
 		utils.Check_error(err)
 
-		// Listen for incoming messages on port 1234
-		lis, err := net.Listen("tcp", ":1234")
-		utils.Check_error(err)
-		defer lis.Close()
-
 		// Use goroutine to implement a lightweight thread to manage the coming of new messages
-		go receiver.Accept(lis)
+		go receiver.Accept(listener)
 
 		// Setup the connection with the peer of group multicast after the reception of list
 		<-channel_connection
@@ -229,13 +200,8 @@ func main() {
 		err := receiver.RegisterName("Peer", peer_3)
 		utils.Check_error(err)
 
-		// Listen for incoming messages on port 1234
-		lis, err := net.Listen("tcp", ":1234")
-		utils.Check_error(err)
-		defer lis.Close()
-
 		// Use goroutine to implement a lightweight thread to manage the coming of new messages
-		go receiver.Accept(lis)
+		go receiver.Accept(listener)
 
 		// Setup the connection with the peer of group multicast after the reception of list
 		<-channel_connection

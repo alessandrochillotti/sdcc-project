@@ -131,7 +131,6 @@ func main() {
 	// Listen for incoming messages on port 1234
 	lis, err := net.Listen("tcp", ":1234")
 	utils.Check_error(err)
-
 	go server.Accept(lis)
 
 	// Wait that every nodes is registered
@@ -141,7 +140,4 @@ func main() {
 
 	// Once that every node is registered, then the register node send the list of nodes to each node of group multicast
 	send_list()
-
-	// Close listener
-	lis.Close()
 }

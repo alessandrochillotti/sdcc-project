@@ -89,7 +89,7 @@ func (p2 *Peer_2) deliver_packet() {
 
 			if deliver {
 				// Deliver the packet to application layer
-				log_message(&head_node.Packet)
+				p2.Peer.log_message(&head_node.Packet)
 
 				// Remove the node that is just delivered
 				p2.mutex_queue.Lock()
@@ -119,7 +119,7 @@ func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty
 // Frontend communication
 func (p2 *Peer_2) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Username: p2.Peer.username, Source_address: getIpAddress(), Message: *text, Index_pid: p2.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p2.Peer.username, Source_address: p2.Peer.ip_address, Message: *text, Index_pid: p2.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p2.mutex_clock.Lock()

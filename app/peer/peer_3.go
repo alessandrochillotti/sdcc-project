@@ -27,7 +27,7 @@ func (p3 *Peer_3) init_peer_3() {
 
 // This RPC method of Node allow to get update from the other node of group multicast
 func (p3 *Peer_3) Get_update(update *utils.Update_vector, empty *utils.Empty) error {
-	if update.Packet.Source_address != getIpAddress() {
+	if update.Packet.Source_address != p3.Peer.ip_address {
 		p3.mutex_clock.Lock()
 		p3.vector_clock.Increment(p3.Peer.index)
 		p3.mutex_clock.Unlock()
@@ -77,7 +77,7 @@ func (p3 *Peer_3) deliver_packet() {
 			p3.vector_clock.Increment(index_pid_to_deliver)
 
 			// Deliver the packet to application layer
-			log_message(&node_to_deliver.Update.Packet)
+			p3.Peer.log_message(&node_to_deliver.Update.Packet)
 
 			// Remove the node that is just delivered
 			p3.waiting_list.Remove_node(node_to_deliver)
@@ -104,7 +104,7 @@ func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_vector
 // This function get the message from frontend and send it in multicast
 func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Username: p3.Peer.username, Source_address: getIpAddress(), Message: *text, Index_pid: p3.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p3.Peer.username, Source_address: p3.Peer.ip_address, Message: *text, Index_pid: p3.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p3.mutex_clock.Lock()
