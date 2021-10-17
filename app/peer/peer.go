@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"alessandro.it/app/utils"
 )
@@ -56,19 +55,6 @@ func (p *Peer) register_into_group() {
 	utils.Check_error(err)
 
 	client.Close()
-}
-
-// This function log message into file: this has the value of delivery to application layer.
-func (p *Peer) log_message(pkt *utils.Packet) {
-	// Open file into volume docker
-	path_file := "/docker/node_volume/" + p.ip_address + "_log.txt"
-	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	utils.Check_error(err)
-
-	_, err = f.WriteString(pkt.Timestamp.Format(time.RFC1123)[17:25] + ";" + pkt.Source_address + ";" + pkt.Username + ";" + pkt.Message + "\n")
-	utils.Check_error(err)
-
-	f.Close()
 }
 
 // This function has the goal to clear the shell and print all messages received and sended by the current peer

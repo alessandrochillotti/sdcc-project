@@ -5,6 +5,8 @@ package main
 
 import (
 	"net/rpc"
+	"os"
+	"strconv"
 	"time"
 
 	"alessandro.it/app/utils"
@@ -34,6 +36,19 @@ func (p1 *Peer_1) Get_Message(pkt *utils.Packet_sequencer, empty *utils.Empty) e
 	return nil
 }
 
+// This function log message into file: this has the value of delivery to application layer.
+func (p1 *Peer_1) log_message(pkt_to_deliver *utils.Packet_sequencer) {
+	// Open file into volume docker
+	path_file := "/docker/node_volume/" + p1.Peer.ip_address + "_log.txt"
+	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	utils.Check_error(err)
+
+	_, err = f.WriteString(strconv.Itoa(pkt_to_deliver.Id) + ";" + pkt_to_deliver.Pkt.Timestamp.Format(time.RFC1123)[17:25] + ";" + pkt_to_deliver.Pkt.Username + ";" + pkt_to_deliver.Pkt.Message + "\n")
+	utils.Check_error(err)
+
+	f.Close()
+}
+
 // This function check if there are packets to deliver, according to current_id + 1 == current_packet.Id.
 func (p1 *Peer_1) deliver_packet() {
 	for {
@@ -44,7 +59,7 @@ func (p1 *Peer_1) deliver_packet() {
 			p1.current_packet_id = p1.current_packet_id + 1
 
 			// Deliver the packet to application layer
-			p1.Peer.log_message(&current_packet.Pkt)
+			p1.log_message(&current_packet)
 		} else {
 			p1.buffer <- current_packet
 		}

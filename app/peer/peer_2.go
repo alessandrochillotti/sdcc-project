@@ -4,6 +4,8 @@ This file build a peer that run following the rules of algorithm 2.
 package main
 
 import (
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -64,6 +66,19 @@ func (p2 *Peer_2) Get_ack(ack *utils.Ack, empty *utils.Empty) error {
 	return nil
 }
 
+// This function log message into file: this has the value of delivery to application layer.
+func (p2 *Peer_2) log_message(update_to_deliver *utils.Update) {
+	// Open file into volume docker
+	path_file := "/docker/node_volume/" + p2.Peer.ip_address + "_log.txt"
+	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	utils.Check_error(err)
+
+	_, err = f.WriteString(strconv.Itoa(update_to_deliver.Timestamp) + ";" + update_to_deliver.Packet.Timestamp.Format(time.RFC1123)[17:25] + ";" + update_to_deliver.Packet.Username + ";" + update_to_deliver.Packet.Message + "\n")
+	utils.Check_error(err)
+
+	f.Close()
+}
+
 /*
 This function check if there are packet to deliver, so the following conditions must be checked:
 	1. The firse message in the local queue must have acked by every node
@@ -89,7 +104,7 @@ func (p2 *Peer_2) deliver_packet() {
 
 			if deliver {
 				// Deliver the packet to application layer
-				p2.Peer.log_message(&head_node.Packet)
+				p2.log_message(&head_node)
 
 				// Remove the node that is just delivered
 				p2.mutex_queue.Lock()
