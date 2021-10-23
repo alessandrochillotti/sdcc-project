@@ -44,7 +44,7 @@ services:
                #  8001 is busy
       - "4444"
     volumes:  
-      - ./volumes/log_node/:/docker/node_volume/
+      - ./frontend/volumes/log_node/:/docker/node_volume/
     links:
       - register_node
   sequencer_node:
