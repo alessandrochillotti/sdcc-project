@@ -6,11 +6,9 @@
 package main
 
 import (
-	"io/ioutil"
 	"net"
 	"net/rpc"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -19,10 +17,10 @@ import (
 
 // Interface Peer base, so the common features to each type of peer
 type Peer struct {
-	index      int
-	ip_address string
-	port       int
-	username   string
+	Index      int
+	Ip_address string
+	Port       int
+	Username   string
 }
 
 /* Constant values */
@@ -57,20 +55,6 @@ func (p *Peer) register_into_group() {
 	client.Close()
 }
 
-// This function has the goal to clear the shell and print all messages received and sended by the current peer
-func (p *Peer) print_chat() {
-	// Clear the screen
-	cmd := exec.Command("clear")
-	cmd.Stdout = os.Stdout
-	cmd.Run()
-
-	// Print all messages, received and sended
-	content, err := ioutil.ReadFile("/docker/node_volume/" + p.ip_address + "_log.txt")
-	utils.Check_error(err)
-	list := string(content)
-	print(list)
-}
-
 // This function, after reception of list from register node, allow to setup connection with each node of group multicast
 func setup_connection(p *Peer) error {
 	var err error
@@ -79,8 +63,8 @@ func setup_connection(p *Peer) error {
 		addr_node := conn.Addresses[i] + ":1234"
 		conn.Peer[i], err = rpc.Dial("tcp", addr_node)
 		utils.Check_error(err)
-		if conn.Addresses[i] == p.ip_address {
-			p.index = i
+		if conn.Addresses[i] == p.Ip_address {
+			p.Index = i
 		}
 	}
 
@@ -127,7 +111,7 @@ func main() {
 	<-channel_handshake
 
 	// Build a new peer
-	peer_base := &Peer{index: hand_peer.New_peer.index, ip_address: hand_peer.New_peer.ip_address, port: hand_peer.New_peer.port, username: hand_peer.New_peer.username}
+	peer_base := &Peer{Index: hand_peer.New_peer.Index, Ip_address: hand_peer.New_peer.Ip_address, Port: hand_peer.New_peer.Port, Username: hand_peer.New_peer.Username}
 
 	// Register the base services of general Peer
 	receiver := rpc.NewServer()
@@ -141,14 +125,14 @@ func main() {
 	peer_base.register_into_group()
 
 	// Create file for log of messages
-	f, err := os.Create("/docker/node_volume/" + peer_base.ip_address + "_log.txt")
+	f, err := os.Create("/docker/node_volume/" + peer_base.Ip_address + "_log.txt")
 	utils.Check_error(err)
 	defer f.Close()
 
 	// Allocate object to use it into program execution
 	if conf.Algorithm == 1 {
 		peer_1 := &Peer_1{Peer: *peer_base}
-		peer_1.init_peer_1(peer_base.username)
+		peer_1.init_peer_1(peer_base.Username)
 
 		err = receiver.RegisterName("Peer", peer_1)
 		utils.Check_error(err)
@@ -164,7 +148,7 @@ func main() {
 
 	} else if conf.Algorithm == 2 {
 		peer_2 := &Peer_2{Peer: *peer_base}
-		peer_2.init_peer_2(peer_base.username)
+		peer_2.init_peer_2(peer_base.Username)
 
 		err := receiver.RegisterName("Peer", peer_2)
 		utils.Check_error(err)

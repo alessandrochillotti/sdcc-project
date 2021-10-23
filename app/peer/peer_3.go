@@ -31,7 +31,7 @@ func (p3 *Peer_3) init_peer_3() {
 // This function log message into file: this has the value of delivery to application layer.
 func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 	// Open file into volume docker
-	path_file := "/docker/node_volume/" + p3.Peer.ip_address + "_log.txt"
+	path_file := "/docker/node_volume/" + p3.Peer.Ip_address + "_log.txt"
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	utils.Check_error(err)
 
@@ -97,7 +97,7 @@ func (p3 *Peer_3) deliver_packet() {
 				// fmt.Println("My index =", p3.Peer.index)
 				// fmt.Println("Index to incremnt =", index_pid_to_deliver)
 				// Update the vector clock
-				if p3.Peer.index != index_pid_to_deliver {
+				if p3.Peer.Index != index_pid_to_deliver {
 					p3.vector_clock.Increment(index_pid_to_deliver)
 				}
 				// p3.vector_clock.Update_with_max(node_to_deliver.Update.Timestamp, conf.Nodes)
@@ -135,11 +135,11 @@ func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_vector
 func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
 	fmt.Println("Sto inviando il messaggio")
 	// Build packet
-	pkt := utils.Packet{Username: p3.Peer.username, Source_address: p3.Peer.ip_address, Message: *text, Index_pid: p3.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p3.Peer.Username, Source_address: p3.Peer.Ip_address, Message: *text, Index_pid: p3.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p3.mutex_clock.Lock()
-	p3.vector_clock.Increment(p3.Peer.index)
+	p3.vector_clock.Increment(p3.Peer.Index)
 	update := utils.Update_vector{Timestamp: *p3.vector_clock, Packet: pkt}
 	p3.mutex_clock.Unlock()
 

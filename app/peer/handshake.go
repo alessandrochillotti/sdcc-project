@@ -18,9 +18,10 @@ type Handshake struct {
 
 // This function allow to manage the log file to frontend
 func (h *Handshake) Handshake(request *utils.Hand_request, reply *utils.Hand_reply) error {
-	h.New_peer = &Peer{index: 0, ip_address: getIpAddress(), port: PORT, username: request.Username}
+	h.New_peer = &Peer{Index: 0, Ip_address: getIpAddress(), Port: PORT, Username: request.Username}
 	// p.username = request.Username
-	reply.Ip_address = h.New_peer.ip_address
+	reply.Ip_address = h.New_peer.Ip_address
+	reply.Algorithm = conf.Algorithm
 
 	channel_handshake <- true
 

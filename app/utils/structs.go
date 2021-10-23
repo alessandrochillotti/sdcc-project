@@ -39,6 +39,7 @@ type Hand_request struct {
 }
 type Hand_reply struct {
 	Ip_address string
+	Algorithm  int
 }
 
 // This struct is used as reply by register node to send the list of nodes

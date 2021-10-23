@@ -39,7 +39,7 @@ func (p1 *Peer_1) Get_Message(pkt *utils.Packet_sequencer, empty *utils.Empty) e
 // This function log message into file: this has the value of delivery to application layer.
 func (p1 *Peer_1) log_message(pkt_to_deliver *utils.Packet_sequencer) {
 	// Open file into volume docker
-	path_file := "/docker/node_volume/" + p1.Peer.ip_address + "_log.txt"
+	path_file := "/docker/node_volume/" + p1.Peer.Ip_address + "_log.txt"
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	utils.Check_error(err)
 
@@ -71,7 +71,7 @@ func (p1 *Peer_1) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	var empty utils.Empty
 
 	// Build packet
-	pkt := utils.Packet{Username: p1.Peer.username, Source_address: p1.Peer.ip_address, Message: *text, Index_pid: p1.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p1.Peer.Username, Source_address: p1.Peer.Ip_address, Message: *text, Index_pid: p1.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
 	addr_sequencer_node := "10.5.0.253:1234"
@@ -83,7 +83,7 @@ func (p1 *Peer_1) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	utils.Delay(MAX_DELAY)
 
 	// Send packet to sequencer node
-	err = client.Call("Sequencer.Send_packet", &pkt, &empty)
+	err = client.Call("Sequencer.Send_packet", pkt, &empty)
 	utils.Check_error(err)
 
 	// Close connection with him

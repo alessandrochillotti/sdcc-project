@@ -69,7 +69,7 @@ func (p2 *Peer_2) Get_ack(ack *utils.Ack, empty *utils.Empty) error {
 // This function log message into file: this has the value of delivery to application layer.
 func (p2 *Peer_2) log_message(update_to_deliver *utils.Update) {
 	// Open file into volume docker
-	path_file := "/docker/node_volume/" + p2.Peer.ip_address + "_log.txt"
+	path_file := "/docker/node_volume/" + p2.Peer.Ip_address + "_log.txt"
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	utils.Check_error(err)
 
@@ -94,7 +94,7 @@ func (p2 *Peer_2) deliver_packet() {
 			head_node := head.Update
 
 			for i := 0; i < conf.Nodes; i++ {
-				if i != p2.Peer.index {
+				if i != p2.Peer.Index {
 					p2.mutex_queue.Lock()
 					update_max_timestamp := p2.ordered_queue.Get_update_max_timestamp(conn.Addresses[i])
 					p2.mutex_queue.Unlock()
@@ -134,7 +134,7 @@ func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty
 // Frontend communication
 func (p2 *Peer_2) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Username: p2.Peer.username, Source_address: p2.Peer.ip_address, Message: *text, Index_pid: p2.Peer.index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p2.Peer.Username, Source_address: p2.Peer.Ip_address, Message: *text, Index_pid: p2.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p2.mutex_clock.Lock()
