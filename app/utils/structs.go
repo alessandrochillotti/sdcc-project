@@ -36,6 +36,7 @@ type Ack struct {
 // This struct is used by frontend to estabilsh a specific type of communication
 type Hand_request struct {
 	Username string
+	Test     bool
 }
 type Hand_reply struct {
 	Ip_address string
@@ -55,4 +56,5 @@ type Configuration struct {
 	Algorithm int
 	Nodes     int
 	Verbose   bool
+	Test      bool
 }

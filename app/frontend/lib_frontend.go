@@ -107,7 +107,7 @@ func get_list_container() string {
 	return list
 }
 
-func handshake(container int) (string, string, int) {
+func handshake(container int, test bool) (string, string, int) {
 	var reply *utils.Hand_reply
 
 	addr_node := "127.0.0.1:" + get_local_port(container, (uint16(4444)))
@@ -123,7 +123,7 @@ func handshake(container int) (string, string, int) {
 	username = strings.TrimSpace(username)
 
 	// Call remote procedure and reply will store the RPC result
-	request := &utils.Hand_request{Username: username}
+	request := &utils.Hand_request{Username: username, Test: test}
 	err = peer_handshake.Call("Handshake.Handshake", &request, &reply)
 	if err != nil {
 		log.Fatal("Error in General.Get_list: ", err)

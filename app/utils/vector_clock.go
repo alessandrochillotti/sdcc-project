@@ -22,11 +22,17 @@ func (v *Vector_clock) Increment(index int) {
 	v.Clocks[index] = v.Clocks[index] + 1
 }
 
+func (v *Vector_clock) Sum() int {
+	sum := 0
+	for i := 0; i < len(v.Clocks); i++ {
+		sum = sum + v.Clocks[i]
+	}
+	return sum
+}
+
 func (v *Vector_clock) Print() {
 	fmt.Printf("[ ")
 	var i int
-	for i = 0; i < len(v.Clocks)-1; i++ {
-		fmt.Printf("%d, ", v.Clocks[i])
-	}
+
 	fmt.Printf("%d ]\n", v.Clocks[i])
 }

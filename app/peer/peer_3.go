@@ -110,7 +110,7 @@ func (p3 *Peer_3) deliver_packet() {
 				p3.waiting_list.Remove_node(node_to_deliver)
 				p3.mutex_queue.Unlock()
 			}
-			fmt.Println("[DOPO] Il mio clock vettoriale è", p3.vector_clock.Clocks)
+			// fmt.Println("[DOPO] Il mio clock vettoriale è", p3.vector_clock.Clocks)
 		}
 	}
 }
@@ -120,12 +120,13 @@ func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_vector
 	/*
 		The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
 	*/
-	// first := true
-	// if first && index_pid == 2 {
-	// 	time.Sleep(time.Duration(10) * time.Second)
-	// 	first = false
-	// }
-	// utils.Delay(MAX_DELAY)
+	if conf.Test {
+		if update.Timestamp.Sum() == 1 && index_pid == 2 {
+			time.Sleep(time.Duration(3) * time.Second)
+		}
+	} else {
+		utils.Delay(MAX_DELAY)
+	}
 
 	err := conn.Peer[index_pid].Call("Peer.Get_update", update, empty_reply)
 	utils.Check_error(err)

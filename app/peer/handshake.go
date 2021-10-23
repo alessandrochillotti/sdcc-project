@@ -22,6 +22,7 @@ func (h *Handshake) Handshake(request *utils.Hand_request, reply *utils.Hand_rep
 	// p.username = request.Username
 	reply.Ip_address = h.New_peer.Ip_address
 	reply.Algorithm = conf.Algorithm
+	conf.Test = request.Test
 
 	channel_handshake <- true
 

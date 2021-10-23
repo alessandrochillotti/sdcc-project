@@ -57,7 +57,7 @@ func main() {
 	fmt.Printf("%s", list_container)
 	fmt.Scanf("%d\n", &selected_container)
 
-	ip_addr, username, _ := handshake(selected_container)
+	ip_addr, username, _ := handshake(selected_container, false)
 
 	// Dial of peer
 	addr_node := "127.0.0.1:" + get_local_port(selected_container, (uint16(1234)))

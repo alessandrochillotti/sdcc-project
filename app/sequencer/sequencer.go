@@ -12,12 +12,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"alessandro.it/app/utils"
 )
 
 type Sequencer struct {
 	current_id int
+	Mutex_id   sync.Mutex
 	peer       []*rpc.Client
 }
 
@@ -35,10 +37,11 @@ func (seq *Sequencer) send_single_message(peer_id int, arg *utils.Packet_sequenc
 // This function is called by each generic node to send packet to each node of group multicast
 func (seq *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
 	// Read file line by line, so scan every ip address
+	seq.Mutex_id.Lock()
 	seq.current_id = seq.current_id + 1
-
 	// Prepare packet to send
 	pkt_seq := utils.Packet_sequencer{Id: seq.current_id, Pkt: *arg}
+	seq.Mutex_id.Unlock()
 
 	// Send to each node of group multicast the message
 	for i := 0; i < len(seq.peer); i++ {
