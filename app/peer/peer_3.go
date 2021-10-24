@@ -20,6 +20,7 @@ type Peer_3 struct {
 	waiting_list *utils.Waiting_list
 	mutex_queue  sync.Mutex
 	mutex_clock  sync.Mutex
+	wg           sync.WaitGroup
 }
 
 // Initialization of peer
@@ -48,11 +49,15 @@ func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 }
 
 // This RPC method of Node allow to get update from the other node of group multicast
-func (p3 *Peer_3) Get_update(update *utils.Update_vector, empty *utils.Empty) error {
+func (p3 *Peer_3) Get_update(update utils.Update_vector, empty *utils.Empty) error {
+	// p3.mutex_clock.Lock()
 	// p3.vector_clock.Increment(update.Packet.Index_pid)
+	// p3.mutex_clock.Unlock()
+
+	fmt.Println("Mi è arrivato", update.Timestamp)
 
 	// Build update node to insert the packet into queue
-	update_node := &utils.Waiting_node{Update: *update, Next: nil, Ack: 0}
+	update_node := &utils.Waiting_node{Update: update, Next: nil, Ack: 0}
 
 	// Insert update node into queue
 	p3.mutex_queue.Lock()
@@ -79,8 +84,10 @@ func (p3 *Peer_3) deliver_packet() {
 
 			t_i := node_to_deliver.Update.Timestamp.Clocks[index_pid_to_deliver]
 			v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
+
 			// fmt.Println("[PRIMA] Il mio clock vettoriale è", p3.vector_clock.Clocks)
 			// fmt.Println("Il timestamp del messaggio è", node_to_deliver.Update.Timestamp.Clocks)
+
 			if t_i == v_j_i+1 {
 				for k := 0; k < conf.Nodes && deliver; k++ {
 					if k != index_pid_to_deliver {
@@ -93,12 +100,16 @@ func (p3 *Peer_3) deliver_packet() {
 				}
 			}
 
+			// p3.waiting_list.Display()
+
 			if deliver {
 				// fmt.Println("My index =", p3.Peer.index)
 				// fmt.Println("Index to incremnt =", index_pid_to_deliver)
 				// Update the vector clock
 				if p3.Peer.Index != index_pid_to_deliver {
+					p3.mutex_clock.Lock()
 					p3.vector_clock.Increment(index_pid_to_deliver)
+					p3.mutex_clock.Unlock()
 				}
 				// p3.vector_clock.Update_with_max(node_to_deliver.Update.Timestamp, conf.Nodes)
 
@@ -116,38 +127,41 @@ func (p3 *Peer_3) deliver_packet() {
 }
 
 // This function send a single message to a single node
-func (p3 *Peer_3) send_single_message(index_pid int, update *utils.Update_vector, empty_reply *utils.Empty) {
-	/*
-		The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
-	*/
+func (p3 *Peer_3) send_single_message(index_pid int, delay int, update utils.Update_vector, empty_reply *utils.Empty) {
+	fmt.Println("Sto inviando", update.Timestamp)
+
 	if conf.Test {
-		if update.Timestamp.Sum() == 1 && index_pid == 2 {
-			time.Sleep(time.Duration(3) * time.Second)
-		}
+		time.Sleep(time.Duration(delay) * time.Second)
 	} else {
 		utils.Delay(MAX_DELAY)
 	}
 
 	err := conn.Peer[index_pid].Call("Peer.Get_update", update, empty_reply)
 	utils.Check_error(err)
+
+	p3.wg.Done()
+
+	fmt.Println("Ho inviato", update.Timestamp)
 }
 
 // This function get the message from frontend and send it in multicast
-func (p3 *Peer_3) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
-	fmt.Println("Sto inviando il messaggio")
+func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Username: p3.Peer.Username, Source_address: p3.Peer.Ip_address, Message: *text, Index_pid: p3.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p3.Peer.Username, Source_address: p3.Peer.Ip_address, Message: msg.Text, Index_pid: p3.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p3.mutex_clock.Lock()
 	p3.vector_clock.Increment(p3.Peer.Index)
-	update := utils.Update_vector{Timestamp: *p3.vector_clock, Packet: pkt}
+	timestamp := *p3.vector_clock
+	update := utils.Update_vector{Timestamp: , Packet: pkt}
 	p3.mutex_clock.Unlock()
 
 	// Send to each node of group multicast the message
+	p3.wg.Add(conf.Nodes)
 	for i := 0; i < conf.Nodes; i++ {
-		go p3.send_single_message(i, &update, empty_reply)
+		go p3.send_single_message(i, msg.Delay[i], update, empty_reply)
 	}
+	p3.wg.Wait()
 
 	return nil
 }

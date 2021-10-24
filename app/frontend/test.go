@@ -89,9 +89,11 @@ func check_log_2(number int) bool {
 func test_one_sender_1(number int) bool {
 	var empty *utils.Empty
 	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
+	delay := make([]int, number)
 
 	for i := 0; i < 6; i++ {
-		err := peer[0].Call("Peer.Get_message_from_frontend", &messages[i], &empty)
+		msg := &utils.Message{Text: messages[i], Delay: delay}
+		err := peer[0].Call("Peer.Get_message_from_frontend", msg, &empty)
 		check_error(err)
 	}
 
@@ -104,9 +106,11 @@ func test_one_sender_1(number int) bool {
 func test_more_sender_1(number int) bool {
 	var empty *utils.Empty
 	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
+	delay := make([]int, number)
 
 	for i := 0; i < 6; i++ {
-		err := peer[i%number].Call("Peer.Get_message_from_frontend", &messages[i], &empty)
+		msg := &utils.Message{Text: messages[i], Delay: delay}
+		err := peer[i%number].Call("Peer.Get_message_from_frontend", msg, &empty)
 		check_error(err)
 	}
 
@@ -118,11 +122,12 @@ func test_more_sender_1(number int) bool {
 // OK
 func test_one_sender_2(number int) bool {
 	var empty *utils.Empty
-
 	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
+	delay := make([]int, number)
 
 	for i := 0; i < 6; i++ {
-		err := peer[0].Call("Peer.Get_message_from_frontend", &messages[i], &empty)
+		msg := &utils.Message{Text: messages[i], Delay: delay}
+		err := peer[0].Call("Peer.Get_message_from_frontend", msg, &empty)
 		check_error(err)
 	}
 
@@ -131,12 +136,15 @@ func test_one_sender_2(number int) bool {
 	return check_log_empty(number)
 }
 
+// OK
 func test_more_sender_2(number int) bool {
-	var empty string
+	var empty utils.Empty
 	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
+	delay := make([]int, number)
 
 	for i := 0; i < 6; i++ {
-		err := peer[i%number].Call("Peer.Get_message_from_frontend", &messages[i], &empty)
+		msg := &utils.Message{Text: messages[i], Delay: delay}
+		err := peer[i%number].Call("Peer.Get_message_from_frontend", msg, &empty)
 		check_error(err)
 	}
 
@@ -145,19 +153,24 @@ func test_more_sender_2(number int) bool {
 	return check_log_2(number)
 }
 
-// NO OK
+// OK
 func test_one_sender_3(number int) bool {
 	return test_one_sender_1(number)
 }
 
 func test_more_sender_3(number int) bool {
 	var empty utils.Empty
-	message_1 := "causa"
-	message_2 := "effetto"
+	delay := make([]int, number)
 
-	err := peer[0].Call("Peer.Get_message_from_frontend", &message_1, &empty)
-	check_error(err)
-	err = peer[1].Call("Peer.Get_message_from_frontend", &message_2, &empty)
+	delay[2] = 3
+	msg_1 := &utils.Message{Text: "causa", Delay: delay}
+	peer[0].Go("Peer.Get_message_from_frontend", msg_1, &empty, nil)
+
+	time.Sleep(time.Duration(1) * time.Second)
+
+	delay[2] = 0
+	msg_2 := &utils.Message{Text: "effetto", Delay: delay}
+	err := peer[1].Call("Peer.Get_message_from_frontend", msg_2, &empty)
 	check_error(err)
 
 	time.Sleep(time.Duration(10) * time.Second)

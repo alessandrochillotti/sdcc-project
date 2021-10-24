@@ -4,6 +4,8 @@ This file contains the utils to manage the list of pending messages (i.e. ALGO 3
 
 package utils
 
+import "fmt"
+
 // This struct define tha waiting list
 type Waiting_list struct {
 	head *Waiting_node
@@ -72,4 +74,14 @@ func (l *Waiting_list) Get_node(counter int) *Waiting_node {
 	}
 
 	return current_node
+}
+
+// Debug function
+func (l *Waiting_list) Display() {
+	current_node := l.head
+	for current_node != nil {
+		fmt.Printf("[%v, %d] -> ", current_node.Update.Timestamp, current_node.Update.Packet.Index_pid)
+		current_node = current_node.Next
+	}
+	fmt.Printf("\n")
 }

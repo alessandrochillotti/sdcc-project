@@ -76,8 +76,7 @@ func main() {
 		fmt.Println("Insert the operation code:")
 		fmt.Println("1. Send message")
 		fmt.Println("2. Print messaged delivered")
-		fmt.Println("3. Test the algorithms")
-		fmt.Println("4. Exit")
+		fmt.Println("3. Exit")
 
 		fmt.Scanf("%d\n", &choice)
 
@@ -87,7 +86,9 @@ func main() {
 			text, err = in.ReadString('\n')
 			text = strings.TrimSpace(text)
 
-			peer.Go("Peer.Get_message_from_frontend", &text, &empty, nil)
+			msg_to_send := &utils.Message{Text: text, Delay: make([]int, 0)}
+
+			peer.Go("Peer.Get_message_from_frontend", msg_to_send, &empty, nil)
 
 			clear_shell()
 
@@ -99,28 +100,6 @@ func main() {
 
 			break
 		case 3:
-			clear_shell()
-
-			choice = 0
-			for choice != 1 && choice != 2 && choice != 3 {
-				fmt.Println("Select the test to perform:")
-				fmt.Println("1. Only sender message multicast")
-				fmt.Println("2. More sender message multicast")
-				fmt.Println("3. Back")
-
-				fmt.Scanf("%d\n", &choice)
-			}
-
-			if choice == 1 {
-				err := peer.Call("Peer.Test_one_sender", &empty, &empty)
-				check_error(err)
-			} else if choice == 2 {
-				// err := peer.Call("Peer.Get_message_from_frontend", &text, &empty)
-				// check_error(err)
-			}
-
-			break
-		case 4:
 			return
 		default:
 			fmt.Println("Codice operativo non supportato.")

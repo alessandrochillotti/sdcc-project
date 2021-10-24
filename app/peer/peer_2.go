@@ -19,6 +19,7 @@ type Peer_2 struct {
 	ordered_queue *utils.Queue
 	mutex_queue   sync.Mutex
 	mutex_clock   sync.Mutex
+	wg            sync.WaitGroup
 }
 
 // Initialization of peer
@@ -117,24 +118,18 @@ func (p2 *Peer_2) deliver_packet() {
 
 // This function send a single message to a single node
 func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty_reply *utils.Empty) {
-	/*
-		The following 3 lines allow to test the algorithm 3 in case of scenario that we saw in class.
-	*/
-	// first := true
-	// if first && i == 2 {
-	// 	time.Sleep(time.Duration(10) * time.Second)
-	// 	first = false
-	// }
 	utils.Delay(MAX_DELAY)
 
 	err := conn.Peer[index_pid].Call("Peer.Get_update", update, empty_reply)
 	utils.Check_error(err)
+
+	p2.wg.Done()
 }
 
 // Frontend communication
-func (p2 *Peer_2) Get_message_from_frontend(text *string, empty_reply *utils.Empty) error {
+func (p2 *Peer_2) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Username: p2.Peer.Username, Source_address: p2.Peer.Ip_address, Message: *text, Index_pid: p2.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Username: p2.Peer.Username, Source_address: p2.Peer.Ip_address, Message: msg.Text, Index_pid: p2.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p2.mutex_clock.Lock()
@@ -143,9 +138,11 @@ func (p2 *Peer_2) Get_message_from_frontend(text *string, empty_reply *utils.Emp
 	p2.mutex_clock.Unlock()
 
 	// Send to each node of group multicast the message
+	p2.wg.Add(conf.Nodes)
 	for i := 0; i < conf.Nodes; i++ {
 		go p2.send_single_message(i, &update, empty_reply)
 	}
+	p2.wg.Wait()
 
 	return nil
 }

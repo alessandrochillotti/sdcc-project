@@ -48,6 +48,12 @@ type List_of_nodes struct {
 	List_str string
 }
 
+// This struct is used to send packet from frontend to peer
+type Message struct {
+	Text  string
+	Delay []int
+}
+
 // This struct is use for RPC method when the reply is not important
 type Empty struct{}
 
