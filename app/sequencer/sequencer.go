@@ -6,7 +6,6 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"net/rpc"
 	"os"
@@ -77,15 +76,11 @@ func main() {
 	// Register a sequencer methods
 	sequencer := rpc.NewServer()
 	err := sequencer.RegisterName("Sequencer", seq)
-	if err != nil {
-		fmt.Println("Format of service is not correct: ", err)
-	}
+	utils.Check_error(err)
 
 	// Listen for incoming messages on port 1234
 	lis, err := net.Listen("tcp", ":1234")
-	if err != nil {
-		fmt.Println("Listen error: ", err)
-	}
+	utils.Check_error(err)
 
 	// Use goroutine to implement a lightweight thread to manage new connection
 	go sequencer.Accept(lis)

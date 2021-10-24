@@ -4,7 +4,6 @@ This file build a peer that run following the rules of algorithm 3.
 package main
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -50,12 +49,6 @@ func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 
 // This RPC method of Node allow to get update from the other node of group multicast
 func (p3 *Peer_3) Get_update(update utils.Update_vector, empty *utils.Empty) error {
-	// p3.mutex_clock.Lock()
-	// p3.vector_clock.Increment(update.Packet.Index_pid)
-	// p3.mutex_clock.Unlock()
-
-	fmt.Println("Mi è arrivato", update.Timestamp)
-
 	// Build update node to insert the packet into queue
 	update_node := &utils.Waiting_node{Update: update, Next: nil, Ack: 0}
 
@@ -85,9 +78,6 @@ func (p3 *Peer_3) deliver_packet() {
 			t_i := node_to_deliver.Update.Timestamp[index_pid_to_deliver]
 			v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
 
-			// fmt.Println("[PRIMA] Il mio clock vettoriale è", p3.vector_clock.Clocks)
-			// fmt.Println("Il timestamp del messaggio è", node_to_deliver.Update.Timestamp.Clocks)
-
 			if t_i == v_j_i+1 {
 				for k := 0; k < conf.Nodes && deliver; k++ {
 					if k != index_pid_to_deliver {
@@ -100,18 +90,13 @@ func (p3 *Peer_3) deliver_packet() {
 				}
 			}
 
-			// p3.waiting_list.Display()
-
 			if deliver {
-				// fmt.Println("My index =", p3.Peer.index)
-				// fmt.Println("Index to incremnt =", index_pid_to_deliver)
 				// Update the vector clock
 				if p3.Peer.Index != index_pid_to_deliver {
 					p3.mutex_clock.Lock()
 					p3.vector_clock.Increment(index_pid_to_deliver)
 					p3.mutex_clock.Unlock()
 				}
-				// p3.vector_clock.Update_with_max(node_to_deliver.Update.Timestamp, conf.Nodes)
 
 				// Deliver the packet to application layer
 				p3.log_message(&node_to_deliver.Update)
@@ -121,15 +106,12 @@ func (p3 *Peer_3) deliver_packet() {
 				p3.waiting_list.Remove_node(node_to_deliver)
 				p3.mutex_queue.Unlock()
 			}
-			// fmt.Println("[DOPO] Il mio clock vettoriale è", p3.vector_clock.Clocks)
 		}
 	}
 }
 
 // This function send a single message to a single node
 func (p3 *Peer_3) send_single_message(index_pid int, delay int, update utils.Update_vector, empty_reply *utils.Empty) {
-	fmt.Println("Sto inviando", update.Timestamp)
-
 	if conf.Test {
 		time.Sleep(time.Duration(delay) * time.Second)
 	} else {
@@ -140,8 +122,6 @@ func (p3 *Peer_3) send_single_message(index_pid int, delay int, update utils.Upd
 	utils.Check_error(err)
 
 	p3.wg.Done()
-
-	fmt.Println("Ho inviato", update.Timestamp)
 }
 
 // This function get the message from frontend and send it in multicast
@@ -161,8 +141,6 @@ func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *uti
 	// Build update packet to send
 	update := utils.Update_vector{Timestamp: timestamp, Packet: pkt}
 	p3.mutex_clock.Unlock()
-
-	fmt.Println("Ho fatto il pacchetto con timestamp", update.Timestamp)
 
 	// Send to each node of group multicast the message
 	p3.wg.Add(conf.Nodes)

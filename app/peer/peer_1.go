@@ -24,11 +24,7 @@ func (p1 *Peer_1) init_peer_1(username string) {
 	p1.buffer = make(chan utils.Packet_sequencer, MAX_QUEUE)
 }
 
-/*
-Algorithm: 1
-
-This function is called by sequencer node for sending message: the message is received, not delivered.
-*/
+// This function is called by sequencer node for sending message: the message is received, not delivered.
 func (p1 *Peer_1) Get_Message(pkt *utils.Packet_sequencer, empty *utils.Empty) error {
 	// The packet is received, so it is buffered
 	p1.buffer <- *pkt

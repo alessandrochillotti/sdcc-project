@@ -1,3 +1,6 @@
+/*
+This file is an application that allow to test the algorithms.
+*/
 package main
 
 import (
@@ -19,6 +22,7 @@ var peer []*rpc.Client
 Test check for verification
 */
 
+// This function check if the files log have the same content.
 func check_log_equal(number int) bool {
 	equal := true
 
@@ -40,6 +44,7 @@ func check_log_equal(number int) bool {
 	return equal
 }
 
+// This function check if the files log are empty.
 func check_log_empty(number int) bool {
 	for i := 0; i < number; i++ {
 		path_file := "./volumes/log_node/10.5.0." + strconv.Itoa(i+2) + "_log.txt"
@@ -54,6 +59,7 @@ func check_log_empty(number int) bool {
 	return true
 }
 
+// This function check if the first N lines of file log are equal, where N is the minimum number line of files log.
 func check_log_2(number int) bool {
 	equal := true
 	minor_len := 10000
