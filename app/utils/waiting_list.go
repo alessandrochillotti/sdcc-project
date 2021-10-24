@@ -21,7 +21,7 @@ type Waiting_node struct {
 
 // This struct emulate the update message in algorithm 3 that the peer send in multicast
 type Update_vector struct {
-	Timestamp Vector_clock
+	Timestamp []int
 	Packet    Packet
 }
 

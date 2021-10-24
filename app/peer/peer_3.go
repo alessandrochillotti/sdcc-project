@@ -38,9 +38,9 @@ func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 
 	timestamp_str := ""
 	for i := 0; i < conf.Nodes-1; i++ {
-		timestamp_str = timestamp_str + strconv.Itoa(update_to_deliver.Timestamp.Clocks[i]) + ","
+		timestamp_str = timestamp_str + strconv.Itoa(update_to_deliver.Timestamp[i]) + ","
 	}
-	timestamp_str = timestamp_str + strconv.Itoa(update_to_deliver.Timestamp.Clocks[conf.Nodes-1])
+	timestamp_str = timestamp_str + strconv.Itoa(update_to_deliver.Timestamp[conf.Nodes-1])
 
 	_, err = f.WriteString(timestamp_str + ";" + update_to_deliver.Packet.Timestamp.Format(time.RFC1123)[17:25] + ";" + update_to_deliver.Packet.Username + ";" + update_to_deliver.Packet.Message + "\n")
 	utils.Check_error(err)
@@ -82,7 +82,7 @@ func (p3 *Peer_3) deliver_packet() {
 		if node_to_deliver != nil {
 			index_pid_to_deliver := node_to_deliver.Update.Packet.Index_pid
 
-			t_i := node_to_deliver.Update.Timestamp.Clocks[index_pid_to_deliver]
+			t_i := node_to_deliver.Update.Timestamp[index_pid_to_deliver]
 			v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
 
 			// fmt.Println("[PRIMA] Il mio clock vettoriale è", p3.vector_clock.Clocks)
@@ -91,7 +91,7 @@ func (p3 *Peer_3) deliver_packet() {
 			if t_i == v_j_i+1 {
 				for k := 0; k < conf.Nodes && deliver; k++ {
 					if k != index_pid_to_deliver {
-						t_k := node_to_deliver.Update.Timestamp.Clocks[k]
+						t_k := node_to_deliver.Update.Timestamp[k]
 						v_j_k := p3.vector_clock.Clocks[k]
 						if t_k > v_j_k {
 							deliver = false
@@ -149,12 +149,20 @@ func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *uti
 	// Build packet
 	pkt := utils.Packet{Username: p3.Peer.Username, Source_address: p3.Peer.Ip_address, Message: msg.Text, Index_pid: p3.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
-	// Update the scalar clock and build update packet to send
+	// Update the scalar clock
 	p3.mutex_clock.Lock()
 	p3.vector_clock.Increment(p3.Peer.Index)
-	timestamp := *p3.vector_clock
-	update := utils.Update_vector{Timestamp: , Packet: pkt}
+
+	// Make timestamp
+	timestamp := make([]int, conf.Nodes)
+	for i := 0; i < conf.Nodes; i++ {
+		timestamp[i] = p3.vector_clock.Clocks[i]
+	}
+	// Build update packet to send
+	update := utils.Update_vector{Timestamp: timestamp, Packet: pkt}
 	p3.mutex_clock.Unlock()
+
+	fmt.Println("Ho fatto il pacchetto con timestamp", update.Timestamp)
 
 	// Send to each node of group multicast the message
 	p3.wg.Add(conf.Nodes)

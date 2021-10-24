@@ -11,7 +11,13 @@ import (
 	"alessandro.it/app/utils"
 )
 
+const WAIT int = 2
+
 var peer []*rpc.Client
+
+/*
+Test check for verification
+*/
 
 func check_log_equal(number int) bool {
 	equal := true
@@ -85,79 +91,126 @@ func check_log_2(number int) bool {
 	return true
 }
 
-// OK
+/*
+Test scenarios
+*/
+
+/*
+Algorithm: 1
+
+Scenario: Only one peer send message in multicast.
+
+Expected outcome: The log files have the same content.
+*/
 func test_one_sender_1(number int) bool {
-	var empty *utils.Empty
-	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
-	delay := make([]int, number)
-
-	for i := 0; i < 6; i++ {
-		msg := &utils.Message{Text: messages[i], Delay: delay}
-		err := peer[0].Call("Peer.Get_message_from_frontend", msg, &empty)
-		check_error(err)
-	}
-
-	time.Sleep(time.Duration(10) * time.Second)
-
-	return check_log_equal(number)
-}
-
-// OK
-func test_more_sender_1(number int) bool {
-	var empty *utils.Empty
-	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
-	delay := make([]int, number)
-
-	for i := 0; i < 6; i++ {
-		msg := &utils.Message{Text: messages[i], Delay: delay}
-		err := peer[i%number].Call("Peer.Get_message_from_frontend", msg, &empty)
-		check_error(err)
-	}
-
-	time.Sleep(time.Duration(10) * time.Second)
-
-	return check_log_equal(number)
-}
-
-// OK
-func test_one_sender_2(number int) bool {
-	var empty *utils.Empty
-	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
-	delay := make([]int, number)
-
-	for i := 0; i < 6; i++ {
-		msg := &utils.Message{Text: messages[i], Delay: delay}
-		err := peer[0].Call("Peer.Get_message_from_frontend", msg, &empty)
-		check_error(err)
-	}
-
-	time.Sleep(time.Duration(10) * time.Second)
-
-	return check_log_empty(number)
-}
-
-// OK
-func test_more_sender_2(number int) bool {
 	var empty utils.Empty
 	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
 	delay := make([]int, number)
 
 	for i := 0; i < 6; i++ {
 		msg := &utils.Message{Text: messages[i], Delay: delay}
-		err := peer[i%number].Call("Peer.Get_message_from_frontend", msg, &empty)
+		err := peer[0].Call("Peer.Get_message_from_frontend", msg, &empty)
 		check_error(err)
 	}
 
-	time.Sleep(time.Duration(10) * time.Second)
+	time.Sleep(time.Duration(WAIT) * time.Second)
+
+	return check_log_equal(number)
+}
+
+/*
+Algorithm: 1
+
+Scenario: More than one peer send message in multicast.
+
+Expected outcome: The log files have the same content.
+*/
+func test_more_sender_1(number int) bool {
+	var empty utils.Empty
+	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
+	delay := make([]int, number)
+
+	divCall := make([]*rpc.Call, number)
+
+	for i := 0; i < number; i++ {
+		msg := &utils.Message{Text: messages[i], Delay: delay}
+		divCall[i] = peer[i].Go("Peer.Get_message_from_frontend", msg, &empty, nil)
+
+		go wait_to_send(i, divCall[i], messages[i+3], delay, &empty)
+	}
+
+	time.Sleep(time.Duration(WAIT) * time.Second)
+
+	return check_log_equal(number)
+}
+
+/*
+Algorithm: 2
+
+Scenario: Only one peer send message in multicast.
+
+Expected outcome: The log files are empty.
+*/
+func test_one_sender_2(number int) bool {
+	var empty utils.Empty
+	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
+	delay := make([]int, number)
+
+	for i := 0; i < 6; i++ {
+		msg := &utils.Message{Text: messages[i], Delay: delay}
+		err := peer[0].Call("Peer.Get_message_from_frontend", msg, &empty)
+		check_error(err)
+	}
+
+	time.Sleep(time.Duration(WAIT) * time.Second)
+
+	return check_log_empty(number)
+}
+
+/*
+Algorithm: 2
+
+Scenario: More than one peer send message in multicast.
+
+Expected outcome: The first N lines of file log are equal, where N is the minimum number line of files log.
+*/
+func test_more_sender_2(number int) bool {
+	var empty utils.Empty
+	var messages = [6]string{"uno", "due", "tre", "quattro", "cinque", "sei"}
+	delay := make([]int, number)
+
+	divCall := make([]*rpc.Call, number)
+
+	for i := 0; i < number; i++ {
+		msg := &utils.Message{Text: messages[i], Delay: delay}
+		divCall[i] = peer[i].Go("Peer.Get_message_from_frontend", msg, &empty, nil)
+
+		go wait_to_send(i, divCall[i], messages[i+3], delay, &empty)
+	}
+
+	time.Sleep(time.Duration(WAIT) * time.Second)
 
 	return check_log_2(number)
 }
 
-// OK
+/*
+Algorithm: 3
+
+Scenario: Only one peer send message in multicast.
+
+Expected outcome: The log files have the same content.
+*/
 func test_one_sender_3(number int) bool {
 	return test_one_sender_1(number)
 }
 
+/*
+Algorithm: 3
+
+Scenario: Example in class.
+
+Expected outcome: Respect causality.
+*/
 func test_more_sender_3(number int) bool {
 	var empty utils.Empty
 	delay := make([]int, number)
@@ -173,9 +226,18 @@ func test_more_sender_3(number int) bool {
 	err := peer[1].Call("Peer.Get_message_from_frontend", msg_2, &empty)
 	check_error(err)
 
-	time.Sleep(time.Duration(10) * time.Second)
+	time.Sleep(time.Duration(WAIT) * time.Second)
 
 	return check_log_equal(number)
+}
+
+/*
+Utility
+*/
+func wait_to_send(index int, divCall *rpc.Call, message string, delay []int, empty *utils.Empty) {
+	msg := &utils.Message{Text: message, Delay: delay}
+	<-divCall.Done
+	peer[index].Go("Peer.Get_message_from_frontend", msg, empty, nil)
 }
 
 func main() {
