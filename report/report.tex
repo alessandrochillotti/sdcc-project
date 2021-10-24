@@ -85,12 +85,7 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  A clear and well-documented \LaTeX\ document is presented as an
-  article formatted for publication by ACM in a conference proceedings
-  or journal publication. Based on the ``acmart'' document class, this
-  article presents and explains many of the common variations, as well
-  as many of the formatting elements an author may use in the
-  preparation of the documentation of their work.
+
 \end{abstract}
 
 %%
@@ -138,37 +133,90 @@
 %% information and builds the first part of the formatted document.
 \maketitle
 
-\section{Introduction}
-ACM's consolidated article template, introduced in 2017, provides a
-consistent \LaTeX\ style for use across ACM publications, and
-incorporates accessibility and metadata-extraction functionality
-necessary for future Digital Library endeavors. Numerous ACM and
-SIG-specific \LaTeX\ templates have been examined, and their unique
-features incorporated into this single new template.
+\section{Traccia del progetto}
+Lo scopo del progetto è realizzare nel linguaggio di programmazione Go un'applicazione distribuita che implementi gli algoritmi di multicast totalmente ordinato e causalmente ordinato.
 
-If you are new to publishing with ACM, this document is a valuable
-guide to the process of preparing your work for publication. If you
-have published with ACM before, this document provides insight and
-instruction into more recent changes to the article template.
+L'applicazione deve soddisfare i requisiti elencati di seguito.
+\begin{itemize}
+\item Un servizio di registrazione dei processi che partecipano al gruppo di comunicazione multicast. Si assuma che la membership sia statica durante l'esecuzione dell'applicazione, quindi non vi sono processi che si aggiungono al gruppo od escono dal gruppo durante la comunicazione.
+\item Il supporto dei seguenti algoritmi di multicast:
+\begin{enumerate}
+\item multicast totalmente ordinato implementato in modo centralizzato tramite un sequencer;
+\item multicast totalmente ordinato implementato in modo decentralizzato tramite l’uso di clock logici scalari;
+\item multicast causalmente ordinato implementato in modo decentralizzato tramite l’uso di clock logici vettoriali.
+\end{enumerate}
+\end{itemize}
+Si richiede di testare il funzionamento degli algoritmi implementati nel caso in cui vi è un solo processo che invia il messaggio di multicast e nel caso in cui molteplici processi contemporaneamente inviano un messaggio di multicast; tali test devono essere forniti nella consegna del progetto.
 
-The ``\verb|acmart|'' document class can be used to prepare articles
-for any ACM publication --- conference or journal, and for any stage
-of publication, from review to final ``camera-ready'' copy, to the
-author's own version, with {\itshape very} few changes to the source.
+Per il debugging, si raccomanda di implementare un flag di tipo verbose, che permette di stampare informazioni di logging con i dettagli dei messaggi inviati e ricevuti. Inoltre, per effettuare il testing in condizioni di maggiore stress, si consiglia di includere nell’invio dei messaggi un parametro delay, che permette di specificare un ritardo, generato in modo random in un intervallo predefinito.
 
-\section{Template Overview}
-As noted in the introduction, the ``\verb|acmart|'' document class can
-be used to prepare many different kinds of documentation --- a
-double-blind initial submission of a full-length technical paper, a
-two-page SIGGRAPH Emerging Technologies abstract, a ``camera-ready''
-journal article, a SIGCHI Extended Abstract, and more --- all by
-selecting the appropriate {\itshape template style} and {\itshape
-  template parameters}.
+Si progetti l'applicazione ponendo particolare cura al soddisfacimento dei requisiti sopra elencati. Si richiede inoltre che gli eventuali parametri relativi all'applicazione e al suo deployment siano configurabili.
 
-This document will explain the major features of the document
-class. For further information, the {\itshape \LaTeX\ User's Guide} is
-available from
-\url{https://www.acm.org/publications/proceedings-template}.
+\section{Scelte progettuali}
+In questa sezione sono presentate e motivare le scelte progettuali effettuate in fase di sviluppo dell'applicativo.
+
+\subsection{Consegna di un messaggio di multicast}
+Tipicamente gli algoritmi di multicast vengono eseguiti al livello del middleware e quindi un importante aspetto da considerare nell'implementazione degli algoritmi è sicuramente la consegna a livello applicativo. Infatti, si ha una sostanziale differenza fra i termini \textit{ricezione} di un messaggio e \textit{consegna} di un messaggio. In particolare:
+\begin{itemize}
+\item La \textit{ricezione} riguarda la fase in cui il messaggio arriva al nodo desiderato. 
+\item La \textit{consegna} riguarda la fase in cui il messaggio viene consegnato all'applicazione al livello sovrastante.
+\end{itemize}
+
+Poiché gli algoritmi sono già eseguiti a livello applicativo, è stato scelto di simulare la consegna di un messaggio attraverso il salvataggio su un file. 
+
+\subsection{Architetture}
+Per lo sviluppo degli algoritmi si è scelto di adottare due architetture differenti, in modo tale da poter scegliere di averne una più adatta in base all'algoritmo richiesto.
+
+\subsubsection{Architettura per l'algoritmo 1}
+L'architettura ideata per la realizzazione dell'algoritmo 1 è la seguente\footnote{In figura è mostrata un'architettura con solamente $3$ peer, ma questo è stato fatto solamente per semplificare l'architettura. Quindi, è possibile scegliere quale numero di peer far partecipare al gruppo multicast in fase di startup dell'applicazione.}.
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.25\textwidth]{architecture/architecture_1}
+\caption{Architettura algoritmo 1}
+\end{figure} 
+
+Si può notare dalla figura che ad ogni peer è stato montato un volume Docker, nel quale è presente il file utilizzato per simulare la consegna del messaggio a livello applicativo. 
+
+Gli attori presenti nell'architettura sono:
+\begin{itemize}
+\item Il \textit{peer} rappresenta un partecipante al gruppo di multicast. Ovviamente, per poter partecipare alla comunicazione si ha la necessità di eseguire una registrazione ad esso.
+\item Il \textit{register} rappresenta il nodo che permette di:
+\begin{itemize}
+\item Accettare le registrazione dei peer finché non si raggiunge il numero di partecipanti stabilito al gruppo multicast.
+\item Inviare la lista dei peer partecipanti al gruppo ad ogni peer registrato.
+\end{itemize}
+\item Il \textit{sequencer} è il nodo che implementa l'algoritmo, assegnando un identificativo ad ogni pacchetto che permette di avere un ordinamento totale.
+\end{itemize}
+
+\subsubsection{Architettura per gli algoritmi 2 e 3}
+L'architettura ideata per la realizzazione degli algoritmi 2 e 3 è la seguente.
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.25\textwidth]{architecture/architecture_2_3}
+\caption{Architettura algoritmo 1}
+\end{figure}
+
+Si può notare, come rispetto all'architettura precedente, non sia presente il \textit{sequencer} poiché gli algoritmi 2 e 3 sono algoritmi realizzati in modo distribuito.
+
+\section{Testing dell'applicazione}
+Per verificare il corretto comportamento degli algoritmi implementati sono stati ideati dei test. In particolare, per ogni algoritmo:
+\begin{itemize}
+\item Un test riguarda l'invio del messaggio di multicast da parte di un solo peer.
+\item Un test riguarda l'invio del messaggio di multicast, anche in modo concorrente, da parte di più peer.
+\end{itemize}
+
+\subsection{Test per l'algoritmo 1}
+
+\subsection{Test per l'algoritmo 2}
+
+\subsection{Test per l'algoritmo 3}
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.4\textwidth]{architecture/test}
+\caption{Test per l'algoritmo 3}
+\end{figure}
 
 \subsection{Template Styles}
 
