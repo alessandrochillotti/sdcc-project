@@ -152,6 +152,14 @@ Per il debugging, si raccomanda di implementare un flag di tipo verbose, che per
 
 Si progetti l'applicazione ponendo particolare cura al soddisfacimento dei requisiti sopra elencati. Si richiede inoltre che gli eventuali parametri relativi all'applicazione e al suo deployment siano configurabili.
 
+\section{Assunzioni}
+Le assunzioni che sono state fatte per realizzare questo applicativo sono:
+\begin{itemize}
+\item La comunicazione è affidabile, ovvero non è possibile che ci sia la presenza di messaggi persi;
+\item La comunicazione è \textit{FIFO} ordered, ovvero se un processo $p_i$ invia molteplici messaggi al processo $p_j$, quest'ultimo riceve i messaggi nello stesso identico ordine in cui $p_i$ li ha inviati;
+\item È stato assunto un ritardo massimo nell'invio del messaggio pari a $3$ secondi perché ritenuto realistico ed adatto allo scopo in questione. Questo ritardo non è altro che uno \texttt{sleep} del processo mittente, quindi viene generato un numero pseudo-randomico fra $0$ e $3$ al momento dell'inoltro del messaggio.
+\end{itemize}
+
 \section{Scelte progettuali}
 In questa sezione sono presentate e motivare le scelte progettuali effettuate in fase di sviluppo dell'applicativo.
 
@@ -164,15 +172,49 @@ Tipicamente gli algoritmi di multicast vengono eseguiti al livello del middlewar
 
 Poiché gli algoritmi sono già eseguiti a livello applicativo, è stato scelto di simulare la consegna di un messaggio attraverso il salvataggio su un file. 
 
+\subsubsection{Struttura del file di consegna} Il file di consegna è visto come una tabella con i seguenti campi:
+\begin{itemize}
+\item \textit{Id}: questo è un campo speciale perché rappresenta l'oggetto chiave con cui l'algoritmo lavora per mantenere l'ordinamento desiderato. In particolare, varia in base all'algoritmo selezionato:
+\begin{itemize}
+\item Algoritmo 1: questo campo corrisponde all'identificativo assegnato dal \textit{sequencer}.
+\item Algoritmo 2: questo campo corrisponde al valore del clock logico scalare del peer mittente, nel momento in cui invia il messaggio.
+\item Algoritmo 3: questo campo corrisponde al valore del clock logico vettoriale del peer mittente, nel momento in cui invia il messaggio.
+\end{itemize}
+\item \textit{Timestamp}: questo campo rappresenta l'istante temporale in cui quel messaggio è stato inviato dal peer mittente.
+\item \textit{Username}: questo campo rappresenta lo username con cui un peer si identifica\footnote{Lo username è specificato in fase di registrazione.}.
+\item \textit{Messaggio}: questo campo rappresenta il contenuto del pacchetto effettivo.
+\end{itemize}
+
+Con lo scopo di facilitare la comprensione della struttura del file di log, viene mostrato un esempio che rappresenta lo snapshot, ad uno specifico istante temporale, del file di log nel caso in cui si adottando l'algoritmo 1.
+
+\begin{table}[ht!]
+  \caption{Esempio del file di consegna (Algoritmo 1)}
+  \label{tab:file}
+  \begin{tabular}{ccccl}
+    \toprule
+    \textit{Id} & \textit{Timestamp} & \textit{Username} & \textit{Messaggio} \\
+    \midrule
+    1 & 12:59:32 & peer\_1 & messaggio 1 \\
+    2 & 13:02:17 & peer\_2 & messaggio 2 \\
+    3 & 13:05:27 & peer\_3 & messaggio 3 \\
+    4 & 13:08:17 & peer\_2 & messaggio 4 \\
+  \bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Architetture}
 Per lo sviluppo degli algoritmi si è scelto di adottare due architetture differenti, in modo tale da poter scegliere di averne una più adatta in base all'algoritmo richiesto.
+
+\subsubsection{Scelte generali} Come descritto in precedenza, la consegna al livello applicativo è stata simulata con il salvataggio del contenuto del messaggio, più relativi metadati, in un file. 
+
+Il file risiede all'interno di volume \textit{Docker} per ogni peer appartenente al gruppo multicast.
 
 \subsubsection{Architettura per l'algoritmo 1}
 L'architettura ideata per la realizzazione dell'algoritmo 1 è la seguente\footnote{In figura è mostrata un'architettura con solamente $3$ peer, ma questo è stato fatto solamente per semplificare l'architettura. Quindi, è possibile scegliere quale numero di peer far partecipare al gruppo multicast in fase di startup dell'applicazione.}.
 
 \begin{figure}[ht!]
 \centering
-\includegraphics[width=0.25\textwidth]{architecture/architecture_1}
+\frame{\includegraphics[width=0.25\textwidth]{architecture/architecture_1}}
 \caption{Architettura algoritmo 1}
 \end{figure} 
 
@@ -193,11 +235,16 @@ Gli attori presenti nell'architettura sono:
 L'architettura ideata per la realizzazione degli algoritmi 2 e 3 è la seguente.
 \begin{figure}[ht!]
 \centering
-\includegraphics[width=0.25\textwidth]{architecture/architecture_2_3}
-\caption{Architettura algoritmo 1}
+\frame{\includegraphics[width=0.3\textwidth]{architecture/architecture_2_3}}
+\caption{Architettura algoritmi 2 e 3}
 \end{figure}
 
 Si può notare, come rispetto all'architettura precedente, non sia presente il \textit{sequencer} poiché gli algoritmi 2 e 3 sono algoritmi realizzati in modo distribuito.
+
+\section{Implementazione}
+
+\section{Piattaforma software}
+
 
 \section{Testing dell'applicazione}
 Per verificare il corretto comportamento degli algoritmi implementati sono stati ideati dei test. In particolare, per ogni algoritmo:
@@ -207,16 +254,43 @@ Per verificare il corretto comportamento degli algoritmi implementati sono stati
 \end{itemize}
 
 \subsection{Test per l'algoritmo 1}
+\subsubsection{Un solo sender} In questa tipologia di test un peer invia sei messaggi, uno dopo l'altro in modo tale da rispettare l'assunzione \textit{FIFO} ordered.
+
+Il risultato aspettato è che ogni peer consegni, nello stesso identico ordine, i messaggi ricevuti al livello applicativo.
+
+\subsubsection{Più sender} In questa tipologia di test ogni peer, in modo concorrente, invia un messaggio al \textit{sequencer} e dopo aver inviato il primo messaggio, inoltra anche un secondo messaggio. 
+
+Il risultato aspettato è che ogni peer consegni, nello stesso identico ordine, i messaggi ricevuti al livello applicativo.
 
 \subsection{Test per l'algoritmo 2}
+\subsubsection{Un solo sender} In questa tipologia di test un peer invia sei messaggi, uno dopo l'altro in modo tale da rispettare l'assunzione \textit{FIFO} ordered.
 
+Il risultato aspettato è che nessun peer consegni messaggi a livello applicativo, in quanto non viene mai rispettata la condizione di consegna poiché è solamente un peer ad effettuare l'inoltro del messaggio in multicast.
+
+\subsubsection{Più sender} In questa tipologia di test ogni peer, in modo concorrente, invia un messaggio al \textit{sequencer} e dopo aver inviato il primo messaggio, inoltra anche un secondo messaggio. 
+
+Il risultato aspettato è che i primi $N$ messaggi consegnati al livello applicativo da ciascun peer siano i medesimi, dove $N$ è il numero minimo di messaggi consegnati dai peer.
 \subsection{Test per l'algoritmo 3}
+\subsubsection{Un solo sender} In questa tipologia di test un peer invia sei messaggi, uno dopo l'altro in modo tale da rispettare l'assunzione \textit{FIFO} ordered.
+
+Il risultato aspettato è che ogni peer consegni, nello stesso identico ordine, i messaggi ricevuti al livello applicativo poiché, essendo un solo sender, non c'è relazione di causa-effetto fra i messaggi.
+
+\subsubsection{Più sender} In questa tipologia di test si è seguito uno schema ben preciso per avere un test valido dal punto di vista della verifica. Lo schema è rappresentato nella seguente figura.
 
 \begin{figure}[ht!]
 \centering
-\includegraphics[width=0.4\textwidth]{architecture/test}
+\frame{\includegraphics[width=0.45\textwidth]{architecture/test}}
 \caption{Test per l'algoritmo 3}
 \end{figure}
+
+In particolare, lo scenario è il seguente:
+\begin{itemize}
+\item Il peer $p_1$ invia un messaggio con timestamp $(1, 0, 0)$ in multicast. Questo messaggio viene ricevuto dal peer $p_2$, ma a causa di un ritardo non viene ricevuto subito dal peer $p_3$.
+\item Il peer $p_2$, a causa del messaggio ricevuto, inoltra un messaggio in multicast con timestamp $(1, 1, 0)$. Questo messaggio viene ricevuto da entrambi i peer senza ritardi. 
+\item Il peer $p_3$, al momento della ricezione del messaggio inviato da $p_2$, deve posticipare la consegna del messaggio con timestamp $(1, 1, 0)$. Una volta ricevuto e consegnato il messaggio con timestamp $(1, 0, 0)$, può procedere con la consegna del messaggio inviato da $p_2$.
+\end{itemize}
+
+Il risultato aspettato è che tutti i peer consegnino i messaggi rispettando la relazione di causa-effetto. Quindi, in questo caso significa che ogni peer consegni, nello stesso ordine, i due messaggi al livello applicativo.
 
 \subsection{Template Styles}
 
