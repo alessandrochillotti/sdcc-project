@@ -7,6 +7,7 @@ WORKDIR /app
 
 COPY ./sequencer/ ./sequencer/
 COPY ./utils/structs.go ./utils/structs.go
+COPY ./utils/utils.go ./utils/utils.go
 COPY ./go.mod ./go.mod
 COPY ./go.sum ./go.sum
 
