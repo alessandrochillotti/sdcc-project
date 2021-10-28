@@ -11,12 +11,22 @@ dove NODES è il numero di peer appartenti al gruppo multicast e ALGO può assum
 scalari
 - 3: multicast causalmente ordinato implementato in modo decentralizzato tramite l’uso di clock
 logici vettoriali
+
 ### Utilizzo dell'applicazione
 Per l'utilizzazione dell'applicazione è stato sviluppato un semplice frontend che permette di interagire con ciascun container potendo effettuare:
 - L'invio dei messaggi.
 - Stampa della lista dei messaggi consegnati a livello applicativo.
 
-Per eseguire il frontend, dopo aver istaziato l'applicazione ed essersi posizionati all'interno della directory `frontend`, basta avviare l'applicazione in Go con il seguente comando:
+Per eseguire il frontend, si necessita di posizionarsi all'interno della directory `frontend`. All'interno è presente un `Makefile` che contiene le seguenti regole:
+- `frontend`: viene compilato il file relativo al frontend.
+- `test`: viene compilato il file relativo al test.
+- `clean`: vengono rimossi gli eseguibili creati.
+
+In questo caso, si otterrà l'eseguibile dell'applicazione con il seguente comando.
+```[bash]
+make frontend
+```
+Verrà generato il file `frontend` eseguibile ed è possibile lanciarlo nel seguente modo.
 ```[bash]
 ./frontend
 ```
@@ -25,7 +35,11 @@ Inoltre, è possibile specificare il flag verbose per avere più dettagli relati
 ./frontend -V
 ```
 ### Testing dell'applicazione
-Per testare l'applicazione, dopo averla istanziata ed essersi posizionati all'interno della directory `frontend`, basta digitare il seguente comando:
+Per testare l'applicazione, dopo averla istanziata ed essersi posizionati all'interno della directory `frontend`, bisogna compilare il file con il seguente comando. 
+```[bash]
+make test
+```
+Successivamente, si lancia l'eseguibile appena generato con il seguente comando.
 ```[bash]
 ./test
 ```
