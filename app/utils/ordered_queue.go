@@ -34,7 +34,7 @@ func (l *Queue) Update_into_queue(update *Node) {
 		previous_node := l.head
 		current_node := previous_node
 		inserted := false
-		for current_node != nil && inserted == false {
+		for current_node != nil && !inserted {
 			if (update.Update.Timestamp < current_node.Update.Timestamp) || ((update.Update.Timestamp == current_node.Update.Timestamp) && (update.Update.Packet.Index_pid < current_node.Update.Packet.Index_pid)) {
 				if previous_node != current_node {
 					previous_node.Next = update
@@ -49,7 +49,7 @@ func (l *Queue) Update_into_queue(update *Node) {
 				current_node = current_node.Next
 			}
 		}
-		if inserted == false {
+		if !inserted {
 			l.tail.Next = update
 			l.tail = update
 			l.tail.Next = nil
