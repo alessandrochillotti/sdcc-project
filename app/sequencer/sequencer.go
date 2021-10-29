@@ -35,10 +35,9 @@ func (seq *Sequencer) send_single_message(peer_id int, arg *utils.Packet_sequenc
 
 // This function is called by each generic node to send packet to each node of group multicast
 func (seq *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
-	// Read file line by line, so scan every ip address
+	// Prepare packet to send
 	seq.Mutex_id.Lock()
 	seq.current_id = seq.current_id + 1
-	// Prepare packet to send
 	pkt_seq := utils.Packet_sequencer{Id: seq.current_id, Pkt: *arg}
 	seq.Mutex_id.Unlock()
 

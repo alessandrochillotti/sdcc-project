@@ -16,7 +16,6 @@ type Waiting_list struct {
 type Waiting_node struct {
 	Update Update_vector
 	Next   *Waiting_node
-	Ack    int
 }
 
 // This struct emulate the update message in algorithm 3 that the peer send in multicast

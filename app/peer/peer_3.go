@@ -50,7 +50,7 @@ func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 // This RPC method of Node allow to get update from the other node of group multicast
 func (p3 *Peer_3) Get_update(update utils.Update_vector, empty *utils.Empty) error {
 	// Build update node to insert the packet into queue
-	update_node := &utils.Waiting_node{Update: update, Next: nil, Ack: 0}
+	update_node := &utils.Waiting_node{Update: update, Next: nil}
 
 	// Insert update node into queue
 	p3.mutex_queue.Lock()
