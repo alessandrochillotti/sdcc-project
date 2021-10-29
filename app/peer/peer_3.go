@@ -16,8 +16,7 @@ import (
 type Peer_3 struct {
 	Peer         Peer
 	vector_clock *utils.Vector_clock
-	waiting_list *utils.Waiting_list
-	mutex_queue  sync.Mutex
+	waiting_list chan (utils.Update_vector)
 	mutex_clock  sync.Mutex
 	wg           sync.WaitGroup
 }
@@ -25,7 +24,7 @@ type Peer_3 struct {
 // Initialization of peer
 func (p3 *Peer_3) init_peer_3() {
 	p3.vector_clock = &utils.Vector_clock{}
-	p3.waiting_list = &utils.Waiting_list{}
+	p3.waiting_list = make(chan utils.Update_vector, MAX_QUEUE)
 }
 
 // This function log message into file: this has the value of delivery to application layer.
@@ -49,13 +48,8 @@ func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 
 // This RPC method of Node allow to get update from the other node of group multicast
 func (p3 *Peer_3) Get_update(update utils.Update_vector, empty *utils.Empty) error {
-	// Build update node to insert the packet into queue
-	update_node := &utils.Waiting_node{Update: update, Next: nil}
-
 	// Insert update node into queue
-	p3.mutex_queue.Lock()
-	p3.waiting_list.Append(update_node)
-	p3.mutex_queue.Unlock()
+	p3.waiting_list <- update
 
 	return nil
 }
@@ -66,46 +60,38 @@ This function check if there are packet to deliver, so the following conditions 
 	2. The current process has seen every messahe that p_j has seen.
 */
 func (p3 *Peer_3) deliver_packet() {
-	current_index := 1
 	for {
 		deliver := true
-		p3.mutex_queue.Lock()
-		node_to_deliver := p3.waiting_list.Get_node(current_index)
-		p3.mutex_queue.Unlock()
-		if node_to_deliver != nil {
-			index_pid_to_deliver := node_to_deliver.Update.Packet.Index_pid
+		node_to_deliver := <-p3.waiting_list
+		index_pid_to_deliver := node_to_deliver.Packet.Index_pid
 
-			t_i := node_to_deliver.Update.Timestamp[index_pid_to_deliver]
-			v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
+		t_i := node_to_deliver.Timestamp[index_pid_to_deliver]
+		v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
 
-			if t_i == v_j_i+1 {
-				for k := 0; k < conf.Nodes && deliver; k++ {
-					if k != index_pid_to_deliver {
-						t_k := node_to_deliver.Update.Timestamp[k]
-						v_j_k := p3.vector_clock.Clocks[k]
-						if t_k > v_j_k {
-							deliver = false
-						}
+		if t_i == v_j_i+1 {
+			for k := 0; k < conf.Nodes && deliver; k++ {
+				if k != index_pid_to_deliver {
+					t_k := node_to_deliver.Timestamp[k]
+					v_j_k := p3.vector_clock.Clocks[k]
+					if t_k > v_j_k {
+						deliver = false
 					}
 				}
 			}
+		}
 
-			if deliver {
-				// Update the vector clock
-				if p3.Peer.Index != index_pid_to_deliver {
-					p3.mutex_clock.Lock()
-					p3.vector_clock.Increment(index_pid_to_deliver)
-					p3.mutex_clock.Unlock()
-				}
-
-				// Deliver the packet to application layer
-				p3.log_message(&node_to_deliver.Update)
-
-				// Remove the node that is just delivered
-				p3.mutex_queue.Lock()
-				p3.waiting_list.Remove_node(node_to_deliver)
-				p3.mutex_queue.Unlock()
+		if deliver {
+			// Update the vector clock
+			if p3.Peer.Index != index_pid_to_deliver {
+				p3.mutex_clock.Lock()
+				p3.vector_clock.Increment(index_pid_to_deliver)
+				p3.mutex_clock.Unlock()
 			}
+
+			// Deliver the packet to application layer
+			p3.log_message(&node_to_deliver)
+		} else {
+			p3.waiting_list <- node_to_deliver
 		}
 	}
 }
@@ -145,7 +131,12 @@ func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *uti
 	// Send to each node of group multicast the message
 	p3.wg.Add(conf.Nodes)
 	for i := 0; i < conf.Nodes; i++ {
-		go p3.send_single_message(i, msg.Delay[i], update, empty_reply)
+		if msg.Delay == nil {
+			go p3.send_single_message(i, 0, update, empty_reply)
+		} else {
+			go p3.send_single_message(i, msg.Delay[i], update, empty_reply)
+		}
+
 	}
 	p3.wg.Wait()
 

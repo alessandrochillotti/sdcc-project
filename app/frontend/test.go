@@ -14,7 +14,7 @@ import (
 	"alessandro.it/app/utils"
 )
 
-const WAIT int = 2
+const WAIT int = 3
 
 var peer []*rpc.Client
 

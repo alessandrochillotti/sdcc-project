@@ -57,6 +57,12 @@ type Message struct {
 // This struct is use for RPC method when the reply is not important
 type Empty struct{}
 
+// This struct emulate the update message in algorithm 3 that the peer send in multicast
+type Update_vector struct {
+	Timestamp []int
+	Packet    Packet
+}
+
 // This struct is used to configurate the variables useful for envinroment configuration
 type Configuration struct {
 	Algorithm int
