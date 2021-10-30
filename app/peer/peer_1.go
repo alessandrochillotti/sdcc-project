@@ -67,7 +67,7 @@ func (p1 *Peer_1) Get_message_from_frontend(msg *utils.Message, empty_reply *uti
 	var empty utils.Empty
 
 	// Build packet
-	pkt := utils.Packet{Source_address: p1.Peer.Ip_address, Message: msg.Text, Index_pid: p1.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Source_address: p1.Peer.Ip_address, Message: msg.Text, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// The sequencer node has ip address set to 10.5.0.253 and it is listening in port 1234
 	addr_sequencer_node := "10.5.0.253:1234"

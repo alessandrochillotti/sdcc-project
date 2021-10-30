@@ -26,7 +26,7 @@ type Update struct {
 }
 
 // This function insert update message into queue maintaining it sorted for timestamp
-func (l *Queue) Update_into_queue(update *Node) {
+func (l *Queue) Update_into_queue(update *Node, index map[string]int) {
 	if l.head == nil {
 		l.head = update
 		l.tail = update
@@ -35,7 +35,7 @@ func (l *Queue) Update_into_queue(update *Node) {
 		current_node := previous_node
 		inserted := false
 		for current_node != nil && !inserted {
-			if (update.Update.Timestamp < current_node.Update.Timestamp) || ((update.Update.Timestamp == current_node.Update.Timestamp) && (update.Update.Packet.Index_pid < current_node.Update.Packet.Index_pid)) {
+			if (update.Update.Timestamp < current_node.Update.Timestamp) || ((update.Update.Timestamp == current_node.Update.Timestamp) && (index[update.Update.Packet.Source_address] < index[current_node.Update.Packet.Source_address])) {
 				if previous_node != current_node {
 					previous_node.Next = update
 					update.Next = current_node
@@ -89,11 +89,11 @@ func (l *Queue) Get_head() *Node {
 }
 
 // Debug function
-func (l *Queue) Display() {
+func (l *Queue) Display(index map[string]int) {
 	current_node := l.head
 	fmt.Println("[timestamp, pid]")
 	for current_node != nil {
-		fmt.Printf("[%v, %d] -> ", current_node.Update.Timestamp, current_node.Update.Packet.Index_pid)
+		fmt.Printf("[%v, %d] -> ", current_node.Update.Timestamp, index[current_node.Update.Packet.Source_address])
 		current_node = current_node.Next
 	}
 	fmt.Printf("\n")
@@ -120,6 +120,5 @@ func (l *Queue) Remove_head() {
 		if l.head == nil {
 			l.tail = nil
 		}
-		l.Display()
 	}
 }

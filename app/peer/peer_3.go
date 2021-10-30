@@ -63,7 +63,7 @@ func (p3 *Peer_3) deliver_packet() {
 	for {
 		deliver := true
 		node_to_deliver := <-p3.waiting_list
-		index_pid_to_deliver := node_to_deliver.Packet.Index_pid
+		index_pid_to_deliver := conn.GetIndex(node_to_deliver.Packet.Source_address)
 
 		t_i := node_to_deliver.Timestamp[index_pid_to_deliver]
 		v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
@@ -113,7 +113,7 @@ func (p3 *Peer_3) send_single_message(index_pid int, delay int, update utils.Upd
 // This function get the message from frontend and send it in multicast
 func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Source_address: p3.Peer.Ip_address, Message: msg.Text, Index_pid: p3.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Source_address: p3.Peer.Ip_address, Message: msg.Text, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock
 	p3.mutex_clock.Lock()

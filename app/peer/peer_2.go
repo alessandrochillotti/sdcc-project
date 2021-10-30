@@ -40,8 +40,8 @@ func (p2 *Peer_2) Get_update(update *utils.Update, empty *utils.Empty) error {
 
 	// Insert update node into queue
 	p2.mutex_queue.Lock()
-	p2.ordered_queue.Update_into_queue(update_node)
-	p2.ordered_queue.Display()
+	p2.ordered_queue.Update_into_queue(update_node, conn.Index)
+	p2.ordered_queue.Display(conn.Index)
 	p2.mutex_queue.Unlock()
 
 	// Send ack message in multicast
@@ -58,7 +58,7 @@ func (p2 *Peer_2) Get_update(update *utils.Update, empty *utils.Empty) error {
 // This RPC method of Node allow to receive ack from other nodes of group multicast.
 func (p2 *Peer_2) Get_ack(ack *utils.Ack, empty *utils.Empty) error {
 	acked := false
-	for acked == false {
+	for !acked {
 		p2.mutex_queue.Lock()
 		acked = p2.ordered_queue.Ack_node(*ack)
 		p2.mutex_queue.Unlock()
@@ -99,7 +99,7 @@ func (p2 *Peer_2) deliver_packet() {
 					p2.mutex_queue.Lock()
 					update_max_timestamp := p2.ordered_queue.Get_update_max_timestamp(conn.Addresses[i])
 					p2.mutex_queue.Unlock()
-					deliver = deliver && (update_max_timestamp.Timestamp > head_node.Timestamp || (update_max_timestamp.Timestamp == head_node.Timestamp && head_node.Packet.Index_pid < update_max_timestamp.Packet.Index_pid))
+					deliver = deliver && (update_max_timestamp.Timestamp > head_node.Timestamp || (update_max_timestamp.Timestamp == head_node.Timestamp && conn.GetIndex(head_node.Packet.Source_address) < conn.GetIndex(update_max_timestamp.Packet.Source_address)))
 				}
 			}
 
@@ -129,7 +129,7 @@ func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty
 // Frontend communication
 func (p2 *Peer_2) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Source_address: p2.Peer.Ip_address, Message: msg.Text, Index_pid: p2.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Source_address: p2.Peer.Ip_address, Message: msg.Text, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p2.mutex_clock.Lock()

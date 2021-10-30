@@ -65,6 +65,9 @@ func setup_connection(p *Peer) error {
 		addr_node := conn.Addresses[i] + ":1234"
 		conn.Peer[i], err = rpc.Dial("tcp", addr_node)
 		utils.Check_error(err)
+
+		conn.Index[conn.Addresses[i]] = i
+
 		if conn.Addresses[i] == p.Ip_address {
 			p.Index = i
 		}
