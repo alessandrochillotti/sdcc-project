@@ -83,8 +83,5 @@ func main() {
 	utils.Check_error(err)
 
 	// Use goroutine to implement a lightweight thread to manage new connection
-	go sequencer.Accept(lis)
-
-	for {
-	}
+	sequencer.Accept(lis)
 }

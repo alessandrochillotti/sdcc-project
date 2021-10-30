@@ -151,7 +151,7 @@ func main() {
 		<-channel_connection
 
 		setup_connection(&peer_1.Peer)
-		go peer_1.deliver_packet()
+		peer_1.deliver_packet()
 
 	} else if conf.Algorithm == 2 {
 		peer_2 := &Peer_2{Peer: *peer_base}
@@ -167,7 +167,7 @@ func main() {
 		<-channel_connection
 
 		setup_connection(&peer_2.Peer)
-		go peer_2.deliver_packet()
+		peer_2.deliver_packet()
 
 	} else if conf.Algorithm == 3 {
 		peer_3 := &Peer_3{Peer: *peer_base}
@@ -184,9 +184,6 @@ func main() {
 		<-channel_connection
 
 		setup_connection(&peer_3.Peer)
-		go peer_3.deliver_packet()
-	}
-
-	for {
+		peer_3.deliver_packet()
 	}
 }

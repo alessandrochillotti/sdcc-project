@@ -10,16 +10,14 @@ import (
 type Whoami struct {
 	Ip_address string
 	Username   string
-	// Index_pid  int
-	Port string
+	Port       string
 }
 
 // This is a packet that contain the message to send to each node og group multicast
 type Packet struct {
 	Source_address string
-	// Index_pid      int
-	Message   string
-	Timestamp time.Time
+	Message        string
+	Timestamp      time.Time
 }
 
 // This struct is used by sequencer to reply to each node of group multicast
