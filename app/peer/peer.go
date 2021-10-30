@@ -39,7 +39,9 @@ func (p *Peer) register_into_group() {
 	var whoami_to_register utils.Whoami
 	var empty utils.Empty
 
-	build_whoami_struct(&whoami_to_register)
+	whoami_to_register.Ip_address = getIpAddress()
+	whoami_to_register.Port = "1234"
+	whoami_to_register.Username = p.Username
 
 	// The RPC server has ip address set to 10.5.0.254 and it is listening in port 1234
 	addr_register_node := "10.5.0.254:1234"
@@ -76,7 +78,9 @@ func (p *Peer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) error {
 	// Parse the list and put the addresses into destination array
 	addr_tmp := strings.Split(list.List_str, "\n")
 	for i := 0; i < conf.Nodes; i++ {
-		conn.Addresses[i] = addr_tmp[i]
+		mapping := strings.Split(addr_tmp[i], ";")
+		conn.Addresses[i] = mapping[0]
+		conn.Username[mapping[0]] = mapping[1]
 	}
 
 	channel_connection <- true

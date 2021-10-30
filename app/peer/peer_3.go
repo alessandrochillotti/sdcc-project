@@ -40,7 +40,7 @@ func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 	}
 	timestamp_str = timestamp_str + strconv.Itoa(update_to_deliver.Timestamp[conf.Nodes-1])
 
-	_, err = f.WriteString(timestamp_str + ";" + update_to_deliver.Packet.Timestamp.Format(time.RFC1123)[17:25] + ";" + update_to_deliver.Packet.Username + ";" + update_to_deliver.Packet.Message + "\n")
+	_, err = f.WriteString(timestamp_str + ";" + update_to_deliver.Packet.Timestamp.Format(time.RFC1123)[17:25] + ";" + conn.GetUsername(update_to_deliver.Packet.Source_address) + ";" + update_to_deliver.Packet.Message + "\n")
 	utils.Check_error(err)
 
 	f.Close()
@@ -113,7 +113,7 @@ func (p3 *Peer_3) send_single_message(index_pid int, delay int, update utils.Upd
 // This function get the message from frontend and send it in multicast
 func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Username: p3.Peer.Username, Source_address: p3.Peer.Ip_address, Message: msg.Text, Index_pid: p3.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Source_address: p3.Peer.Ip_address, Message: msg.Text, Index_pid: p3.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock
 	p3.mutex_clock.Lock()

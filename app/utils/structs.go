@@ -9,12 +9,12 @@ import (
 // This struct identify a specific node
 type Whoami struct {
 	Ip_address string
+	Username   string
 	Port       string
 }
 
 // This is a packet that contain the message to send to each node og group multicast
 type Packet struct {
-	Username       string
 	Source_address string
 	Index_pid      int
 	Message        string

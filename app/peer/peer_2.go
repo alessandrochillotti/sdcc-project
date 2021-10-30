@@ -74,7 +74,7 @@ func (p2 *Peer_2) log_message(update_to_deliver *utils.Update) {
 	f, err := os.OpenFile(path_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	utils.Check_error(err)
 
-	_, err = f.WriteString(strconv.Itoa(update_to_deliver.Timestamp) + ";" + update_to_deliver.Packet.Timestamp.Format(time.RFC1123)[17:25] + ";" + update_to_deliver.Packet.Username + ";" + update_to_deliver.Packet.Message + "\n")
+	_, err = f.WriteString(strconv.Itoa(update_to_deliver.Timestamp) + ";" + update_to_deliver.Packet.Timestamp.Format(time.RFC1123)[17:25] + ";" + conn.GetUsername(update_to_deliver.Packet.Source_address) + ";" + update_to_deliver.Packet.Message + "\n")
 	utils.Check_error(err)
 
 	f.Close()
@@ -129,7 +129,7 @@ func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty
 // Frontend communication
 func (p2 *Peer_2) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	// Build packet
-	pkt := utils.Packet{Username: p2.Peer.Username, Source_address: p2.Peer.Ip_address, Message: msg.Text, Index_pid: p2.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
+	pkt := utils.Packet{Source_address: p2.Peer.Ip_address, Message: msg.Text, Index_pid: p2.Peer.Index, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 
 	// Update the scalar clock and build update packet to send
 	p2.mutex_clock.Lock()

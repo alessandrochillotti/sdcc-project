@@ -13,6 +13,7 @@ import (
 	"net/rpc"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"alessandro.it/app/utils"
@@ -39,7 +40,7 @@ func (reg *Register) Register_node(arg *utils.Whoami, empty *utils.Empty) error 
 
 	// Write into file the ip address of registered node
 	mutex_write.Lock()
-	_, err = f.WriteString(arg.Ip_address + "\n")
+	_, err = f.WriteString(arg.Ip_address + ";" + arg.Username + "\n")
 	if err != nil {
 		log.Println(err)
 		return err
@@ -92,7 +93,8 @@ func send_list() {
 
 	// Send to each node of group multicast the message
 	for scanner.Scan() {
-		addr_node := scanner.Text() + ":1234"
+		data := strings.Split(scanner.Text(), ";")
+		addr_node := data[0] + ":1234"
 		client, err := rpc.Dial("tcp", addr_node)
 		if err != nil {
 			log.Println("Error in dialing: ", err)

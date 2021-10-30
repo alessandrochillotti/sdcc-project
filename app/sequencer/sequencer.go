@@ -59,7 +59,8 @@ func (seq *Sequencer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) er
 	// Parse the list and put the addresses into destination array
 	addr_tmp := strings.Split(list.List_str, "\n")
 	for i := 0; i < nodes; i++ {
-		addr_node := addr_tmp[i] + ":1234"
+		mapping := strings.Split(addr_tmp[i], ";")
+		addr_node := mapping[0] + ":1234"
 		seq.peer[i], err = rpc.Dial("tcp", addr_node)
 		if err != nil {
 			return err
