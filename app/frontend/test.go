@@ -315,15 +315,17 @@ func main() {
 			}
 
 			if outcome {
-				fmt.Println("Test passed")
+				fmt.Println("Test passed\n")
 			} else {
-				fmt.Println("Test NO passed")
+				fmt.Println("Test NO passed\n")
 			}
 			break
 		case 3:
 			return
 		default:
-			fmt.Println("Codice operativo non supportato.")
+			clear_shell()
+
+			fmt.Println("Operation code not valid\n")
 			break
 		}
 

@@ -1,3 +1,6 @@
+/*
+This file is an application that allow to join into multicast program.
+*/
 package main
 
 import (
@@ -11,6 +14,7 @@ import (
 	"alessandro.it/app/utils"
 )
 
+// This function check if the flag verbose is setted.
 func catch_verbose_flag() bool {
 	for i := 0; i < len(os.Args); i++ {
 		if os.Args[i] == "-V" {
@@ -21,6 +25,7 @@ func catch_verbose_flag() bool {
 	return false
 }
 
+// This function print the log of files.
 func print_log(path_file string, verbose bool) {
 	log_file, err := os.Open(path_file)
 	if err != nil {
@@ -55,7 +60,15 @@ func main() {
 	list_container := get_list_container()
 	fmt.Println("Insert the number of one of following containers:")
 	fmt.Printf("%s", list_container)
+
+	number_container := len(strings.Split(list_container, "\n")) - 1
+
+	// Replicate do while
 	fmt.Scanf("%d\n", &selected_container)
+	for selected_container < 1 || selected_container > number_container {
+		fmt.Println("Insert a number between 1 to", number_container)
+		fmt.Scanf("%d\n", &selected_container)
+	}
 
 	ip_addr, username, _ := handshake(selected_container, false)
 
@@ -92,6 +105,8 @@ func main() {
 
 			clear_shell()
 
+			fmt.Println("Message sent\n")
+
 			break
 		case 2:
 			clear_shell()
@@ -102,7 +117,9 @@ func main() {
 		case 3:
 			return
 		default:
-			fmt.Println("Codice operativo non supportato.")
+			clear_shell()
+
+			fmt.Println("Operation code not valid\n")
 			break
 		}
 
