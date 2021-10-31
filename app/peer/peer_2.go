@@ -122,8 +122,9 @@ func (p2 *Peer_2) deliver_packet() {
 
 // This function send a single message to a single node
 func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty_reply *utils.Empty) {
-	utils.Delay(MAX_DELAY)
-
+	if index_pid != conn.GetIndex(update.Packet.Source_address) {
+		utils.Delay(MAX_DELAY)
+	}
 	err := conn.Peer[index_pid].Call("Peer.Get_update", update, empty_reply)
 	utils.Check_error(err)
 

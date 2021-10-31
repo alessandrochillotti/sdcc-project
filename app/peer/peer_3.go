@@ -4,6 +4,7 @@ This file build a peer that run following the rules of algorithm 3.
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -64,14 +65,18 @@ This function check if there are packet to deliver, so the following conditions 
 */
 func (p3 *Peer_3) deliver_packet() {
 	for {
-		deliver := true
+		deliver := false
 		node_to_deliver := <-p3.waiting_list
 		index_pid_to_deliver := conn.GetIndex(node_to_deliver.Packet.Source_address)
+
+		fmt.Println("timestamp = ", node_to_deliver.Timestamp)
+		fmt.Println("vector clock =", p3.vector_clock.Clocks)
 
 		t_i := node_to_deliver.Timestamp[index_pid_to_deliver]
 		v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
 
 		if t_i == v_j_i+1 {
+			deliver = true
 			for k := 0; k < conf.Nodes && deliver; k++ {
 				if k != index_pid_to_deliver {
 					t_k := node_to_deliver.Timestamp[k]
@@ -81,6 +86,8 @@ func (p3 *Peer_3) deliver_packet() {
 					}
 				}
 			}
+		} else if p3.Peer.Index == index_pid_to_deliver {
+			deliver = true
 		}
 
 		if deliver {
@@ -103,7 +110,7 @@ func (p3 *Peer_3) deliver_packet() {
 func (p3 *Peer_3) send_single_message(index_pid int, delay int, update utils.Update_vector, empty_reply *utils.Empty) {
 	if conf.Test {
 		time.Sleep(time.Duration(delay) * time.Second)
-	} else {
+	} else if index_pid != conn.GetIndex(update.Packet.Source_address) {
 		utils.Delay(MAX_DELAY)
 	}
 
@@ -142,7 +149,6 @@ func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *uti
 		} else {
 			go p3.send_single_message(i, msg.Delay[i], update, empty_reply)
 		}
-
 	}
 	p3.wg.Wait()
 
