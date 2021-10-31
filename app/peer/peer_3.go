@@ -48,6 +48,9 @@ func (p3 *Peer_3) log_message(update_to_deliver *utils.Update_vector) {
 
 // This RPC method of Node allow to get update from the other node of group multicast
 func (p3 *Peer_3) Get_update(update utils.Update_vector, empty *utils.Empty) error {
+	// Reset timer
+	conf.Timer.Reset(time.Duration(utils.TIMER) * time.Second)
+
 	// Insert update node into queue
 	p3.waiting_list <- update
 
@@ -112,6 +115,9 @@ func (p3 *Peer_3) send_single_message(index_pid int, delay int, update utils.Upd
 
 // This function get the message from frontend and send it in multicast
 func (p3 *Peer_3) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
+	// Reset timer
+	conf.Timer.Reset(time.Duration(utils.TIMER) * time.Second)
+
 	// Build packet
 	pkt := utils.Packet{Source_address: p3.Peer.Ip_address, Message: msg.Text, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}
 

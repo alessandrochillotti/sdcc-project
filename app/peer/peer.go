@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"alessandro.it/app/utils"
 )
@@ -106,6 +107,21 @@ func init_configuration() {
 	channel_handshake = make(chan bool)
 }
 
+/*
+This function, after 30 seconds without the arrival of new messages,
+closes all active connections and the application process is killed.
+*/
+func (p *Peer) manage_connection() {
+	// Wait timer
+	<-conf.Timer.C
+
+	for i := 0; i < conf.Nodes; i++ {
+		conn.Peer[i].Close()
+	}
+
+	os.Exit(0)
+}
+
 func main() {
 	hand_peer := new(Handshake)
 	init_configuration()
@@ -136,6 +152,9 @@ func main() {
 	utils.Check_error(err)
 	defer f.Close()
 
+	conf.Timer = time.NewTimer(time.Duration(utils.TIMER) * time.Second)
+	go peer_base.manage_connection()
+
 	// Allocate object to use it into program execution
 	if conf.Algorithm == 1 {
 		peer_1 := &Peer_1{Peer: *peer_base}
@@ -151,6 +170,7 @@ func main() {
 		<-channel_connection
 
 		setup_connection(&peer_1.Peer)
+
 		peer_1.deliver_packet()
 
 	} else if conf.Algorithm == 2 {
@@ -167,6 +187,7 @@ func main() {
 		<-channel_connection
 
 		setup_connection(&peer_2.Peer)
+
 		peer_2.deliver_packet()
 
 	} else if conf.Algorithm == 3 {
@@ -184,6 +205,7 @@ func main() {
 		<-channel_connection
 
 		setup_connection(&peer_3.Peer)
+
 		peer_3.deliver_packet()
 	}
 }

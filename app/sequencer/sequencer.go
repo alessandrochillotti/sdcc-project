@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"alessandro.it/app/utils"
 )
@@ -20,6 +21,7 @@ type Sequencer struct {
 	current_id int
 	Mutex_id   sync.Mutex
 	peer       []*rpc.Client
+	timer      *time.Timer
 }
 
 // This function send a specific message to each node of group multicast
@@ -35,6 +37,9 @@ func (seq *Sequencer) send_single_message(peer_id int, arg *utils.Packet_sequenc
 
 // This function is called by each generic node to send packet to each node of group multicast
 func (seq *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
+	// Reset timer
+	seq.timer.Reset(time.Duration(utils.TIMER) * time.Second)
+
 	// Prepare packet to send
 	seq.Mutex_id.Lock()
 	seq.current_id = seq.current_id + 1
@@ -70,8 +75,24 @@ func (seq *Sequencer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) er
 	return nil
 }
 
+/*
+This function, after 30 seconds without the arrival of new messages,
+closes all active connections and the application process is killed.
+*/
+func (seq *Sequencer) manage_connection() {
+	// Wait timer
+	<-seq.timer.C
+
+	for i := 0; i < len(seq.peer); i++ {
+		seq.peer[i].Close()
+	}
+
+	os.Exit(0)
+}
+
 func main() {
 	seq := &Sequencer{current_id: 0}
+	seq.timer = time.NewTimer(time.Duration(utils.TIMER) * time.Second)
 
 	// Register a sequencer methods
 	sequencer := rpc.NewServer()
@@ -81,6 +102,9 @@ func main() {
 	// Listen for incoming messages on port 1234
 	lis, err := net.Listen("tcp", ":1234")
 	utils.Check_error(err)
+
+	// Manage connection
+	go seq.manage_connection()
 
 	// Use goroutine to implement a lightweight thread to manage new connection
 	sequencer.Accept(lis)

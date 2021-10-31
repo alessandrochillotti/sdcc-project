@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"alessandro.it/app/utils"
 )
@@ -112,6 +113,18 @@ func send_list() {
 	file.Close()
 }
 
+/*
+This function, after (10 * nodes) seconds without the arrival of new messages, close the application
+*/
+func manage_connection(nodes int) {
+	quit_timer := time.NewTimer(time.Duration(10*nodes) * time.Second)
+
+	// Wait timer
+	<-quit_timer.C
+
+	os.Exit(0)
+}
+
 func main() {
 	// Build useful structures
 	chan_reg = make(chan bool)
@@ -124,6 +137,9 @@ func main() {
 	f, err := os.Create("/docker/register_volume/nodes.txt")
 	utils.Check_error(err)
 	f.Close()
+
+	// Wait timer
+	go manage_connection(nodes)
 
 	// Register a new RPC server and the struct we created above
 	server := rpc.NewServer()

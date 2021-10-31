@@ -26,6 +26,9 @@ func (p1 *Peer_1) init_peer_1(username string) {
 
 // This function is called by sequencer node for sending message: the message is received, not delivered.
 func (p1 *Peer_1) Get_Message(pkt *utils.Packet_sequencer, empty *utils.Empty) error {
+	// Reset timer
+	conf.Timer.Reset(time.Duration(utils.TIMER) * time.Second)
+
 	// The packet is received, so it is buffered
 	p1.buffer <- *pkt
 
@@ -65,6 +68,9 @@ func (p1 *Peer_1) deliver_packet() {
 // Frontend communication
 func (p1 *Peer_1) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	var empty utils.Empty
+
+	// Reset timer
+	conf.Timer.Reset(time.Duration(utils.TIMER) * time.Second)
 
 	// Build packet
 	pkt := utils.Packet{Source_address: p1.Peer.Ip_address, Message: msg.Text, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}

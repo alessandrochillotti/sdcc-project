@@ -68,4 +68,5 @@ type Configuration struct {
 	Nodes     int
 	Verbose   bool
 	Test      bool
+	Timer     *time.Timer
 }
