@@ -7,6 +7,12 @@ then
     exit 1
 fi
 
+if [ $2 -lt 3 -o $2 -gt 9 ]
+then
+	echo "The nodes must be a number between 3 to 9."
+	exit 1
+fi
+
 if [ $1 -eq 1 ]
 then
     ALGO=1 NUMBER_NODE=${2} docker-compose --profile sequencer up --scale peer=${2} -d
