@@ -42,13 +42,6 @@ func clear_shell() {
 	}
 }
 
-func check_error(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		os.Exit(1)
-	}
-}
-
 func get_local_port(index int, port_number uint16) string {
 	var port uint16
 	port = 0
@@ -125,11 +118,17 @@ func handshake(container int, test bool) (string, string, int) {
 	// Call remote procedure and reply will store the RPC result
 	request := &utils.Hand_request{Username: username, Test: test}
 	err = peer_handshake.Call("Handshake.Handshake", &request, &reply)
-	if err != nil {
-		log.Fatal("Error in General.Get_list: ", err)
-	}
+	clear_shell()
+	check_error(err)
 
 	peer_handshake.Close()
 
 	return reply.Ip_address, username, reply.Algorithm
+}
+
+func check_error(err error) {
+	if err != nil {
+		fmt.Println("Something went wrong. Retry.")
+		os.Exit(1)
+	}
 }

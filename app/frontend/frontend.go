@@ -75,7 +75,7 @@ func main() {
 	// Dial of peer
 	addr_node := "127.0.0.1:" + get_local_port(selected_container, (uint16(1234)))
 	peer, err := rpc.Dial("tcp", addr_node)
-	utils.Check_error(err)
+	check_error(err)
 
 	// Prepare information to print log
 	path_file := "./volumes/log_node/" + ip_addr + "_log.txt"
