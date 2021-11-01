@@ -153,7 +153,6 @@ func main() {
 	defer f.Close()
 
 	conf.Timer = time.NewTimer(time.Duration(utils.TIMER_NODE*conf.Nodes) * time.Second)
-	go peer_base.manage_connection()
 
 	// Allocate object to use it into program execution
 	if conf.Algorithm == 1 {
@@ -166,14 +165,11 @@ func main() {
 		// Use goroutine to implement a lightweight thread to manage the coming of new messages
 		go receiver.Accept(listener)
 
-		// Setup the connection with the peer of group multicast after the reception of list
-		<-channel_connection
-
-		setup_connection(&peer_1.Peer)
-
 		peer_1.deliver_packet()
 
 	} else if conf.Algorithm == 2 {
+		go peer_base.manage_connection()
+
 		peer_2 := &Peer_2{Peer: *peer_base}
 		peer_2.init_peer_2(peer_base.Username)
 
@@ -191,6 +187,8 @@ func main() {
 		peer_2.deliver_packet()
 
 	} else if conf.Algorithm == 3 {
+		go peer_base.manage_connection()
+
 		peer_3 := &Peer_3{Peer: *peer_base}
 		peer_3.init_peer_3()
 		peer_3.vector_clock.Init(conf.Nodes)

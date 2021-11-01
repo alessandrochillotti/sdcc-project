@@ -81,36 +81,36 @@ func send_list() {
 		}
 
 		client_sequencer.Close()
-	}
-
-	// Open file
-	file, err := os.Open("/docker/register_volume/nodes.txt")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Read file line by line, so scan every ip address
-	scanner := bufio.NewScanner(file)
-
-	// Send to each node of group multicast the message
-	for scanner.Scan() {
-		data := strings.Split(scanner.Text(), ";")
-		addr_node := data[0] + ":1234"
-		client, err := rpc.Dial("tcp", addr_node)
+	} else {
+		// Open file
+		file, err := os.Open("/docker/register_volume/nodes.txt")
 		if err != nil {
-			log.Println("Error in dialing: ", err)
+			log.Fatal(err)
 		}
 
-		// Call remote procedure and reply will store the RPC result
-		err = client.Call("General.Get_list", &list_nodes, &empty)
-		if err != nil {
-			log.Fatal("Error in General.Get_list: ", err)
+		// Read file line by line, so scan every ip address
+		scanner := bufio.NewScanner(file)
+
+		// Send to each node of group multicast the message
+		for scanner.Scan() {
+			data := strings.Split(scanner.Text(), ";")
+			addr_node := data[0] + ":1234"
+			client, err := rpc.Dial("tcp", addr_node)
+			if err != nil {
+				log.Println("Error in dialing: ", err)
+			}
+
+			// Call remote procedure and reply will store the RPC result
+			err = client.Call("General.Get_list", &list_nodes, &empty)
+			if err != nil {
+				log.Fatal("Error in General.Get_list: ", err)
+			}
+
+			client.Close()
 		}
 
-		client.Close()
+		file.Close()
 	}
-
-	file.Close()
 }
 
 /*
