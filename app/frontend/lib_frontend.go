@@ -19,6 +19,7 @@ import (
 
 var clear map[string]func() //create a map for storing clear funcs
 
+// This function allow to init a map to generate the correct command 'clear'
 func init() {
 	clear = make(map[string]func()) //Initialize it
 	clear["linux"] = func() {
@@ -33,6 +34,7 @@ func init() {
 	}
 }
 
+// This function clear the shell
 func clear_shell() {
 	value, ok := clear[runtime.GOOS] //runtime.GOOS -> linux, windows, darwin etc.
 	if ok {                          //if we defined a clear func for that platform:
@@ -42,6 +44,7 @@ func clear_shell() {
 	}
 }
 
+// This function, using Docker Api, get the number of port to connect with container
 func get_local_port(index int, port_number uint16) string {
 	var port uint16
 	port = 0
@@ -70,6 +73,7 @@ func get_local_port(index int, port_number uint16) string {
 	return strconv.Itoa(int(port))
 }
 
+// This function, using Docker Api, return the list of container
 func get_list_container() string {
 	var list string
 
@@ -100,6 +104,7 @@ func get_list_container() string {
 	return list
 }
 
+// This function make handshake with peer to manage information
 func handshake(container int, test bool) (string, string, int) {
 	var reply *utils.Hand_reply
 
@@ -126,6 +131,7 @@ func handshake(container int, test bool) (string, string, int) {
 	return reply.Ip_address, username, reply.Algorithm
 }
 
+// This function wraps the check of error
 func check_error(err error) {
 	if err != nil {
 		fmt.Println("Something went wrong. Retry.")
