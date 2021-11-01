@@ -25,7 +25,7 @@ type Peer struct {
 }
 
 /* Constant values */
-const MAX_QUEUE = 100
+const MAX_QUEUE = 20
 const MAX_DELAY = 3
 const PORT = 1234
 
