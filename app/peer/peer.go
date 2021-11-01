@@ -41,7 +41,7 @@ func (p *Peer) register_into_group() {
 	var empty utils.Empty
 
 	whoami_to_register.Ip_address = getIpAddress()
-	whoami_to_register.Port = "1234"
+	whoami_to_register.Port = PORT
 	whoami_to_register.Username = p.Username
 
 	// The RPC server has ip address set to 10.5.0.254 and it is listening in port 1234

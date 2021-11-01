@@ -10,7 +10,7 @@ import (
 type Whoami struct {
 	Ip_address string
 	Username   string
-	Port       string
+	Port       int
 }
 
 // This is a packet that contain the message to send to each node og group multicast
