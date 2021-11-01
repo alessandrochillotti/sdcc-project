@@ -31,7 +31,7 @@ func (p2 *Peer_2) init_peer_2(username string) {
 // This RPC method of Node allow to get update from the other node of group multicast
 func (p2 *Peer_2) Get_update(update *utils.Update, empty *utils.Empty) error {
 	// Reset timer
-	conf.Timer.Reset(time.Duration(utils.TIMER) * time.Second)
+	conf.Timer.Reset(time.Duration(utils.TIMER_NODE*conf.Nodes) * time.Second)
 
 	// Manage scalar clock
 	p2.mutex_clock.Lock()
@@ -134,7 +134,7 @@ func (p2 *Peer_2) send_single_message(index_pid int, update *utils.Update, empty
 // Frontend communication
 func (p2 *Peer_2) Get_message_from_frontend(msg *utils.Message, empty_reply *utils.Empty) error {
 	// Reset timer
-	conf.Timer.Reset(time.Duration(utils.TIMER) * time.Second)
+	conf.Timer.Reset(time.Duration(utils.TIMER_NODE*conf.Nodes) * time.Second)
 
 	// Build packet
 	pkt := utils.Packet{Source_address: p2.Peer.Ip_address, Message: msg.Text, Timestamp: time.Now().Add(time.Duration(2) * time.Hour)}

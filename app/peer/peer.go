@@ -152,7 +152,7 @@ func main() {
 	utils.Check_error(err)
 	defer f.Close()
 
-	conf.Timer = time.NewTimer(time.Duration(utils.TIMER) * time.Second)
+	conf.Timer = time.NewTimer(time.Duration(utils.TIMER_NODE*conf.Nodes) * time.Second)
 	go peer_base.manage_connection()
 
 	// Allocate object to use it into program execution

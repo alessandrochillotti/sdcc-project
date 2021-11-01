@@ -38,7 +38,7 @@ func (seq *Sequencer) send_single_message(peer_id int, arg *utils.Packet_sequenc
 // This function is called by each generic node to send packet to each node of group multicast
 func (seq *Sequencer) Send_packet(arg *utils.Packet, empty *utils.Empty) error {
 	// Reset timer
-	seq.timer.Reset(time.Duration(utils.TIMER) * time.Second)
+	seq.timer.Reset(time.Duration(utils.TIMER_NODE*len(seq.peer)) * time.Second)
 
 	// Prepare packet to send
 	seq.Mutex_id.Lock()
@@ -72,6 +72,12 @@ func (seq *Sequencer) Get_list(list *utils.List_of_nodes, reply *utils.Empty) er
 		}
 	}
 
+	// Init timer
+	seq.timer = time.NewTimer(time.Duration(utils.TIMER_NODE*len(seq.peer)) * time.Second)
+
+	// Manage connection
+	go seq.manage_connection()
+
 	return nil
 }
 
@@ -92,7 +98,6 @@ func (seq *Sequencer) manage_connection() {
 
 func main() {
 	seq := &Sequencer{current_id: 0}
-	seq.timer = time.NewTimer(time.Duration(utils.TIMER) * time.Second)
 
 	// Register a sequencer methods
 	sequencer := rpc.NewServer()
@@ -102,9 +107,6 @@ func main() {
 	// Listen for incoming messages on port 1234
 	lis, err := net.Listen("tcp", ":1234")
 	utils.Check_error(err)
-
-	// Manage connection
-	go seq.manage_connection()
 
 	// Use goroutine to implement a lightweight thread to manage new connection
 	sequencer.Accept(lis)

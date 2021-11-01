@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const TIMER int = 30
+const TIMER_NODE int = 10
 
 // This function wraps the pseudo-random generation of delay to send a packet.
 func Delay(max int) {
