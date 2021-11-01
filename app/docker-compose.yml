@@ -21,7 +21,7 @@ services:
       - "8000:1234" # This maps port 8000 of my host to port 1234 of container
     volumes:
       # The following volume is mounted in /var/lib/docker/volumes/app_list_volume/_data/nodes.txt
-      - list_volume:/docker/register_volume/
+      - ./register_node/volumes/list_peer/:/docker/register_volume/
   peer:
     build: 
       context: .
@@ -60,7 +60,4 @@ services:
       - "8001:1234" # This maps port 8000 of my host to port 1234 of container
     profiles:
       - sequencer
-      
-volumes:
-  list_volume:
-  log_node:
+
