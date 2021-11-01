@@ -75,7 +75,9 @@ func (p3 *Peer_3) deliver_packet() {
 		t_i := node_to_deliver.Timestamp[index_pid_to_deliver]
 		v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]
 
-		if t_i == v_j_i+1 {
+		if p3.Peer.Index == index_pid_to_deliver {
+			deliver = true
+		} else if t_i == v_j_i+1 {
 			deliver = true
 			for k := 0; k < conf.Nodes && deliver; k++ {
 				if k != index_pid_to_deliver {
@@ -86,8 +88,6 @@ func (p3 *Peer_3) deliver_packet() {
 					}
 				}
 			}
-		} else if p3.Peer.Index == index_pid_to_deliver {
-			deliver = true
 		}
 
 		if deliver {
