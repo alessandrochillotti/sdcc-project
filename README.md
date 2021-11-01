@@ -1,5 +1,11 @@
 # Sistemi Distribuiti e Cloud Computing - Alessandro Chillotti (mat. 0299824)
 ## Multicast totalmente e causalmente ordinato in Go
+### Struttura del progetto
+All'interno di questa repository è possibile trovare:
+- La directory `app`, contenente l'applicativo.
+- Il report, contenente la spiegazione delle scelte progettuali.
+
+Per seguire i prossimi passi, sarà necessario posizionarsi nella directory `app`.
 ### Istanziazione dell'applicazione
 Per istanziare l'applicazione utilizzare il seguente comando:
 ```[bash]
