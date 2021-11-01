@@ -165,6 +165,9 @@ func main() {
 		// Use goroutine to implement a lightweight thread to manage the coming of new messages
 		go receiver.Accept(listener)
 
+		// Setup the connection with the peer of group multicast after the reception of list
+		<-channel_connection
+
 		peer_1.deliver_packet()
 
 	} else if conf.Algorithm == 2 {
