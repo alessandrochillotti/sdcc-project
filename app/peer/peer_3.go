@@ -4,7 +4,6 @@ This file build a peer that run following the rules of algorithm 3.
 package main
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -68,9 +67,6 @@ func (p3 *Peer_3) deliver_packet() {
 		deliver := false
 		node_to_deliver := <-p3.waiting_list
 		index_pid_to_deliver := conn.GetIndex(node_to_deliver.Packet.Source_address)
-
-		fmt.Println("timestamp = ", node_to_deliver.Timestamp)
-		fmt.Println("vector clock =", p3.vector_clock.Clocks)
 
 		t_i := node_to_deliver.Timestamp[index_pid_to_deliver]
 		v_j_i := p3.vector_clock.Clocks[index_pid_to_deliver]

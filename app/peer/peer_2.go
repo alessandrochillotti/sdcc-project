@@ -45,7 +45,6 @@ func (p2 *Peer_2) Get_update(update *utils.Update, empty *utils.Empty) error {
 	// Insert update node into queue
 	p2.mutex_queue.Lock()
 	p2.ordered_queue.Update_into_queue(update_node, conn.Index)
-	p2.ordered_queue.Display(conn.Index)
 	p2.mutex_queue.Unlock()
 
 	// Send ack message in multicast
