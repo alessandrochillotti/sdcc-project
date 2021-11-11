@@ -1,0 +1,10 @@
+\babel@toc {italian}{}
+\babel@toc {italian}{}
+\beamer@sectionintoc {1}{Servizi richiesti}{3}{0}{1}
+\beamer@sectionintoc {2}{Assunzioni}{4}{0}{2}
+\beamer@sectionintoc {3}{Scelte progettuali}{5}{0}{3}
+\beamer@sectionintoc {4}{Dettagli generali}{7}{0}{4}
+\beamer@sectionintoc {5}{Interazione fra i peer}{9}{0}{5}
+\beamer@sectionintoc {6}{Algoritmi}{11}{0}{6}
+\beamer@sectionintoc {7}{Piattaforma software}{14}{0}{7}
+\beamer@sectionintoc {8}{Testing}{15}{0}{8}
